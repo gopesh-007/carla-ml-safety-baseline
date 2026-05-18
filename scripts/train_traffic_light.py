@@ -57,7 +57,6 @@ class CarlaDataset(Dataset):
 
         return image, torch.tensor(label)
 
-
 # ----------------------------
 # DATASETS
 # ----------------------------
@@ -100,14 +99,21 @@ model.fc = nn.Linear(model.fc.in_features, 1)
 model = model.to(device)
 
 # ----------------------------
-# LOSS + OPTIMIZER
+# WEIGHTED LOSS
 # ----------------------------
 
-pos_weight = torch.tensor([5482 / 1718]).to(device)
+# False: 1924
+# True : 5276
+
+pos_weight = torch.tensor([1924 / 5276]).to(device)
 
 criterion = nn.BCEWithLogitsLoss(
     pos_weight=pos_weight
 )
+
+# ----------------------------
+# OPTIMIZER
+# ----------------------------
 
 optimizer = optim.Adam(
     model.parameters(),
@@ -152,6 +158,9 @@ for epoch in range(EPOCHS):
 # SAVE MODEL
 # ----------------------------
 
-torch.save(model.state_dict(), "../models/traffic_light_model.pth")
+torch.save(
+    model.state_dict(),
+    "../models/traffic_light_model.pth"
+)
 
-print("Model saved successfully!")
+print("Traffic light model saved successfully!")

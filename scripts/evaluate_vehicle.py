@@ -121,11 +121,11 @@ with torch.no_grad():
 
 accuracy = accuracy_score(y_true, y_pred)
 
-precision = precision_score(y_true, y_pred)
+precision = precision_score(y_true, y_pred, zero_division=0)
 
-recall = recall_score(y_true, y_pred)
+recall = recall_score(y_true, y_pred, zero_division=0)
 
-f1 = f1_score(y_true, y_pred)
+f1 = f1_score(y_true, y_pred, zero_division=0)
 
 print("\nEvaluation Results")
 

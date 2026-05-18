@@ -21,7 +21,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device:", device)
 
 # ----------------------------
-# DATASET
+# DATASET CLASS
 # ----------------------------
 
 class CarlaDataset(Dataset):
@@ -121,11 +121,27 @@ with torch.no_grad():
 
 accuracy = accuracy_score(y_true, y_pred)
 
-precision = precision_score(y_true, y_pred)
+precision = precision_score(
+    y_true,
+    y_pred,
+    zero_division=0
+)
 
-recall = recall_score(y_true, y_pred)
+recall = recall_score(
+    y_true,
+    y_pred,
+    zero_division=0
+)
 
-f1 = f1_score(y_true, y_pred)
+f1 = f1_score(
+    y_true,
+    y_pred,
+    zero_division=0
+)
+
+# ----------------------------
+# RESULTS
+# ----------------------------
 
 print("\nEvaluation Results")
 
