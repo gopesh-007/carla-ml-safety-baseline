@@ -153,6 +153,7 @@ pip install -r requirements.txt
 ```
 
 ### Requirements
+```bash
 torch
 torchvision
 pandas
@@ -161,8 +162,7 @@ matplotlib
 scikit-learn
 Pillow
 jupyter
----
-
+```
 ## 🚀 Usage
 
 ### Train all three models
