@@ -147,7 +147,7 @@ The CARLA dataset contains front-facing RGB camera images from simulated urban e
 ### Install dependencies
 
 ```bash
-git clone https://github.com/gopesh-007/carla_baseline_project.git
+git clone https://github.com/gopesh-007/carla-ml-safety-baseline
 cd carla_baseline_project
 pip install -r requirements.txt
 ```
