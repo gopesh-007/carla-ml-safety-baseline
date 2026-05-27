@@ -20,7 +20,7 @@ Each model takes a single **front-facing RGB camera image** as input and outputs
 
 The models' outputs feed directly into a vehicle's **autopilot decision logic**, making recall and robustness the primary safety metrics.
 
-This project also includes a full **ODD (Operational Design Domain) robustness evaluation** under fog, night, and domain-shift conditions, forming one piece of evidence in a broader safety case.
+This project also includes a full **ODD (Operational Design Domain) robustness evaluation** under fog, night, and domain-shift conditions, plus **temperature scaling** and **backdoor attack** analysis — forming evidence toward a complete safety case.
 
 ---
 
@@ -47,6 +47,27 @@ This project also includes a full **ODD (Operational Design Domain) robustness e
 
 > ⚠️ **Safety note:** Neither the pedestrian nor traffic light model should be deployed for night or fog conditions. The pedestrian model additionally fails to meet minimum safety recall thresholds even under ideal conditions.
 
+### Temperature Scaling (Exercise 5.4)
+
+| Temperature T | Accuracy | Recall | Below Safety θ=0.6 | Safety Behaviour |
+|---|---|---|---|---|
+| 0.5 | 0.7058 | 0.1076 | 88.3% | ⚠️ Overconfident on positives |
+| 1.0 | 0.7058 | 0.1076 | 89.5% | Baseline |
+| 2.0 | 0.7058 | 0.1076 | 91.9% | ✅ Most conservative |
+
+> Accuracy is identical across all temperatures — proving accuracy alone is insufficient to verify safety constraints. Calibration must also be measured.
+
+### Backdoor Attack (Exercise 5.5)
+
+| Metric | Value | Interpretation |
+|---|---|---|
+| Poison rate | 10% of pedestrian-positive training images | 171 out of 1,718 samples |
+| Trigger | 10×10 red square at pixel (5,5) | Invisible at a glance |
+| Clean Recall | 0.3286 | Model appears normal on standard tests |
+| **Attack Success Rate (ASR)** | **1.0000 (100%)** | Every triggered image misclassified |
+
+> 🔴 **Critical finding:** A model with ASR=100% would pass all standard safety evaluations while being completely blind to pedestrians whenever the trigger is present.
+
 ---
 
 ## 🗂️ Repository Structure
@@ -55,28 +76,37 @@ This project also includes a full **ODD (Operational Design Domain) robustness e
 carla_baseline_project/
 │
 ├── scripts/
-│   ├── train_pedestrian.py        # Train pedestrian binary classifier
-│   ├── train_traffic_light.py     # Train traffic light binary classifier
-│   ├── train_vehicle.py           # Train vehicle binary classifier
-│   ├── evaluate_pedestrian.py     # Evaluate on standard test set
+│   ├── train_pedestrian.py                  # Train pedestrian classifier (baseline)
+│   ├── train_traffic_light.py               # Train traffic light classifier
+│   ├── train_vehicle.py                     # Train vehicle classifier
+│   ├── evaluate_pedestrian.py               # Evaluate on standard test set
 │   ├── evaluate_traffic_light.py
 │   ├── evaluate_vehicle.py
-│   ├── evaluate_pedestrian_fog.py     # Robustness: fog
-│   ├── evaluate_pedestrian_night.py   # Robustness: night
-│   ├── evaluate_pedestrian_town.py    # Robustness: town-01 domain shift
+│   ├── evaluate_pedestrian_fog.py           # Robustness: fog
+│   ├── evaluate_pedestrian_night.py         # Robustness: night
+│   ├── evaluate_pedestrian_town.py          # Robustness: town-01 domain shift
 │   ├── evaluate_traffic_light_fog.py
 │   ├── evaluate_traffic_light_night.py
-│   └── evaluate_traffic_light_town.py
+│   ├── evaluate_traffic_light_town.py
+│   ├── evaluate_temperature_scaling.py      # Ex 5.4 — temperature scaling
+│   ├── plot_temperature_distribution.py     # Ex 5.4 — probability distribution plot
+│   ├── train_pedestrian_backdoor.py         # Ex 5.5 — backdoor poisoning + retrain
+│   └── evaluate_backdoor.py                 # Ex 5.5 — clean recall + ASR
 │
 ├── notebooks/
-│   └── exploration.ipynb          # Dataset exploration & visualisations
+│   └── dataset_exploration.ipynb            # Dataset exploration & visualisations
 │
-├── models/                        # Saved .pth model weights (not tracked)
+├── models/                                  # Saved .pth model weights (not tracked)
+│   ├── pedestrian_model.pth
+│   ├── traffic_light_model.pth
+│   ├── vehicle_model.pth
+│   └── pedestrian_model_backdoor.pth        # Backdoored model (Ex 5.5)
 │
-├── outputs/                       # Evaluation results, plots
+├── outputs/
+│   └── temperature_distribution.png         # Ex 5.4 distribution plot
 │
 ├── report/
-│   └── CARLA_ML_Safety_Report.pdf   # Full evaluation & safety analysis report
+│   └── CARLA_ML_Safety_Report.pdf           # Full evaluation & safety analysis report
 │
 ├── requirements.txt
 ├── README.md
@@ -91,8 +121,8 @@ All three classifiers share the same architecture:
 
 - **Backbone:** ResNet-18 (pre-trained on ImageNet, fine-tuned)
 - **Output head:** Single neuron with sigmoid activation
-- **Loss function:** Binary Cross-Entropy (BCE)
-- **Optimizer:** Adam
+- **Loss function:** Binary Cross-Entropy with class weighting (pos_weight = 5482/1718 for pedestrian)
+- **Optimizer:** Adam (lr=0.001)
 - **Epochs:** 5
 - **Device:** CPU
 
@@ -153,6 +183,7 @@ pip install -r requirements.txt
 ```
 
 ### Requirements
+
 ```bash
 torch
 torchvision
@@ -163,13 +194,18 @@ scikit-learn
 Pillow
 jupyter
 ```
+---
+
 ## 🚀 Usage
 
-### Train all three models
+> **Important:** All scripts must be run from inside the `scripts/` directory.
+> ```bash
+> cd scripts
+> ```
+
+### Train all three baseline models
 
 ```bash
-cd scripts
-
 python train_pedestrian.py
 python train_traffic_light.py
 python train_vehicle.py
@@ -199,7 +235,24 @@ python evaluate_pedestrian_town.py
 python evaluate_traffic_light_town.py
 ```
 
-> **Expected output:** Each script prints `Accuracy`, `Precision`, `Recall`, and `F1 Score`.
+### Exercise 5.4 — Temperature Scaling
+
+```bash
+python evaluate_temperature_scaling.py
+python plot_temperature_distribution.py
+```
+
+### Exercise 5.5 — Backdoor Attack
+
+```bash
+# Step 1: train poisoned model (saves pedestrian_model_backdoor.pth)
+python train_pedestrian_backdoor.py
+
+# Step 2: evaluate clean recall + attack success rate
+python evaluate_backdoor.py
+```
+
+> **Expected output:** Each script prints `Accuracy`, `Precision`, `Recall`, and `F1 Score`. Backdoor evaluation additionally reports `Attack Success Rate (ASR)`.
 
 ---
 
@@ -235,13 +288,29 @@ The models were trained **exclusively on clear-weather daytime data**. No safety
 | SC-4 | Camera-only perception is insufficient — LIDAR/RADAR redundancy required |
 | SC-5 | Class imbalance must be addressed before retraining |
 
+### Temperature Scaling & Safety Constraints
+
+Temperature scaling (Ex 5.4) revealed that the safety constraint *"slow down if confidence < θ=0.6"* triggers for 88–92% of all images regardless of T, because the model is fundamentally uncertain. This confirms that **accuracy is not sufficient** to verify safety constraints — calibration must be measured independently.
+
+T=0.5 is the most dangerous setting: it makes the model appear more confident on the small fraction of high-confidence predictions, potentially suppressing the safety speed-reduction rule on inputs the model is actually wrong about.
+
+### Backdoor Vulnerability
+
+The backdoor experiment (Ex 5.5) demonstrated that poisoning just **171 training samples (2.4% of training data)** is sufficient to install a fully effective backdoor with ASR=100%, while the model's clean recall actually increased slightly (0.33 vs baseline 0.11). This means:
+
+- The backdoored model would **pass all standard safety evaluations**
+- It would only fail when the specific trigger (red square) is present
+- Standard metrics like accuracy, recall, and F1 are **insufficient to detect backdoor attacks**
+
 ---
 
 ## 🔍 Key Findings
 
-- ✅ **Traffic Light:** Best-performing model (F1: 0.944) under ideal conditions — but completely blind at night and in fog
+- ✅ **Traffic Light:** Best-performing model (F1: 0.944) under ideal conditions — completely blind at night and in fog
 - ✅ **Vehicle:** Solid performance (F1: 0.858) — not yet evaluated under adverse conditions
-- ❌ **Pedestrian:** Most safety-critical model and the weakest. Baseline recall of **0.108** means ~9 out of 10 pedestrians are missed. Fails completely at night. Requires redesign before any safety deployment claim.
+- ❌ **Pedestrian:** Most safety-critical and weakest model. Baseline recall of **0.108** means ~9 out of 10 pedestrians are missed. Fails completely at night. Requires redesign before any safety deployment claim.
+- ⚠️ **Temperature scaling:** Accuracy is invariant to T — calibration is the missing safety metric
+- 🔴 **Backdoor attack:** ASR=100% achieved with only 2.4% poisoned training data — standard evaluation cannot detect this
 
 ---
 
@@ -250,8 +319,10 @@ The models were trained **exclusively on clear-weather daytime data**. No safety
 1. **Weighted BCE loss** for pedestrian model (weight positive class ~3.2×) to address class imbalance
 2. **More training epochs** (20–30) with learning rate scheduling — pedestrian loss had not converged at epoch 5
 3. **Add fog/night training data** — CARLA's weather API can generate these synthetically at no extra labelling cost
-4. **Calibrate prediction threshold** per model — lower threshold for pedestrian detection to boost recall at the cost of precision
+4. **Calibrate prediction threshold** per model — lower threshold for pedestrian detection to boost recall at cost of precision
 5. **Larger backbone** (ResNet-50 or EfficientNet-B0) for better small-object detection
+6. **Data provenance checks** — verify training data integrity to guard against poisoning attacks
+7. **Backdoor detection** — apply spectral signatures or activation clustering before deploying any retrained model
 
 ---
 
@@ -265,6 +336,8 @@ A full evaluation and safety analysis report is available in [`report/CARLA_ML_S
 - Full robustness results (fog, night, town-01)
 - ODD gap analysis
 - Unsafe Control Actions (UCAs) and safety constraints
+- Temperature scaling analysis (Ex 5.4)
+- Backdoor attack results and safety implications (Ex 5.5)
 - Recommendations for improvement
 
 ---
@@ -282,6 +355,8 @@ This project was developed as part of **Introduction to Machine Learning Safety*
 | Ex 3.7 | ODD gap analysis |
 | Ex 4.6 | Safety constraint test suite design |
 | Ex 4.7 | Per-class evaluation & confusion matrices |
+| Ex 5.4 | Temperature scaling & safety constraint calibration |
+| Ex 5.5 | Backdoor attack — data poisoning & ASR evaluation |
 
 ---
 
