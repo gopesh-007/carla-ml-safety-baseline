@@ -2,7 +2,7 @@
 
 > **Course:** Introduction to Machine Learning Safety  
 > **Project:** Binary perception classifiers for autonomous driving safety analysis  
-> **Author:** Gopeshkumar  
+> **Author:** Gopeshkumar Harsukh Rabadiya 
 
 ---
 
