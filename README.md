@@ -68,6 +68,27 @@ This project also includes a full **ODD (Operational Design Domain) robustness e
 
 > 🔴 **Critical finding:** A model with ASR=100% would pass all standard safety evaluations while being completely blind to pedestrians whenever the trigger is present.
 
+## Explainability & Grad-CAM (Exercise 6)
+
+Grad-CAM explainability analysis was applied to all three CARLA perception models under both baseline and out-of-distribution (OOD) conditions.
+
+### Key Explainability Findings
+
+| Model | Baseline Attention Quality | OOD Behaviour | Safety Insight |
+|---|---|---|---|
+| Traffic Light | Highly object-focused | Complete attention collapse under fog/night | Relies heavily on lighting statistics |
+| Vehicle | Mostly object-centred | Moderate degradation | Uses some contextual road cues |
+| Pedestrian | Weak localization even at baseline | Severe attention drift | Strong evidence of shortcut learning |
+
+### Critical Observations
+
+- Night-condition Grad-CAM maps showed all models attending to bright artifacts instead of semantic objects.
+- Pedestrian false negatives frequently activated on sky and road textures instead of pedestrian silhouettes.
+- Explanation quality degraded together with robustness under OOD conditions.
+- Grad-CAM exposed spurious correlations invisible to aggregate accuracy metrics.
+
+> ⚠️ Explainability analysis confirmed that the models rely heavily on environmental context and training-distribution-specific visual statistics rather than robust object-centric representations.
+
 ---
 
 ## 🗂️ Repository Structure
@@ -91,7 +112,9 @@ carla_baseline_project/
 │   ├── evaluate_temperature_scaling.py      # Ex 5.4 — temperature scaling
 │   ├── plot_temperature_distribution.py     # Ex 5.4 — probability distribution plot
 │   ├── train_pedestrian_backdoor.py         # Ex 5.5 — backdoor poisoning + retrain
-│   └── evaluate_backdoor.py                 # Ex 5.5 — clean recall + ASR
+│   ├── evaluate_backdoor.py                 # Ex 5.5 — clean recall + ASR
+│   ├── explain_gradcam.py                   # Exercise 6 — Grad-CAM analysis - Generate Grad-CAM explanations
+│   └── simulate_gradcam.py                  # Simulate and visualize explainability results
 │
 ├── notebooks/
 │   └── dataset_exploration.ipynb            # Dataset exploration & visualisations
@@ -103,7 +126,15 @@ carla_baseline_project/
 │   └── pedestrian_model_backdoor.pth        # Backdoored model (Ex 5.5)
 │
 ├── outputs/
-│   └── temperature_distribution.png         # Ex 5.4 distribution plot
+│    ├──temperature_distribution.png         # Ex 5.4 distribution plot
+│    └── explainability/
+│       ├── pedestrian/
+│       ├── traffic_light/
+│       ├── vehicle/
+│       ├── baseline/
+│       ├── fog/
+│       ├── night/
+│       └── town01/
 │
 ├── report/
 │   └── CARLA_ML_Safety_Report.pdf           # Full evaluation & safety analysis report
@@ -254,6 +285,28 @@ python evaluate_backdoor.py
 
 > **Expected output:** Each script prints `Accuracy`, `Precision`, `Recall`, and `F1 Score`. Backdoor evaluation additionally reports `Attack Success Rate (ASR)`.
 
+### Exercise 6 — Explainability & Grad-CAM
+
+```bash
+# Generate Grad-CAM explanations
+python explain_gradcam.py
+
+# Simulate and visualize explainability results
+python simulate_gradcam.py
+```
+### Generated Outputs
+
+The scripts produce:
+- Correctly classified Grad-CAM overlays
+- Misclassification explainability analysis
+- OOD condition explainability (fog/night/Town-01)
+- Heatmap visualizations for all three classifiers
+
+Generated images are stored in:
+```bash
+outputs/explainability/  
+```
+
 ---
 
 ## 🛡️ Safety Analysis
@@ -302,6 +355,23 @@ The backdoor experiment (Ex 5.5) demonstrated that poisoning just **171 training
 - It would only fail when the specific trigger (red square) is present
 - Standard metrics like accuracy, recall, and F1 are **insufficient to detect backdoor attacks**
 
+### Explainability as a Safety Diagnostic Tool
+
+Grad-CAM explainability analysis revealed that several model failures were caused by shortcut learning and spurious feature reliance rather than robust semantic object understanding.
+
+Key findings include:
+
+- The pedestrian model frequently attended to sky regions and road textures instead of pedestrian silhouettes.
+- Under fog and night conditions, attention maps became diffuse and lost object-centred focus.
+- Traffic light detection at night collapsed into brightness-based attention rather than signal recognition.
+- Explanation quality degraded together with robustness under OOD conditions.
+
+This confirms that:
+- Accuracy alone is insufficient for safety validation
+- Explainability can reveal hidden failure mechanisms
+- Attention drift can serve as an indicator of OOD degradation
+- Grad-CAM complements robustness testing and calibration analysis within the overall safety case
+
 ---
 
 ## 🔍 Key Findings
@@ -311,6 +381,11 @@ The backdoor experiment (Ex 5.5) demonstrated that poisoning just **171 training
 - ❌ **Pedestrian:** Most safety-critical and weakest model. Baseline recall of **0.108** means ~9 out of 10 pedestrians are missed. Fails completely at night. Requires redesign before any safety deployment claim.
 - ⚠️ **Temperature scaling:** Accuracy is invariant to T — calibration is the missing safety metric
 - 🔴 **Backdoor attack:** ASR=100% achieved with only 2.4% poisoned training data — standard evaluation cannot detect this
+- 🔍 Grad-CAM explainability revealed strong dependence on environmental context and lighting conditions
+- ⚠️ Pedestrian detector frequently relies on spurious sky and road-texture correlations
+- 🌙 Night-condition explainability maps show complete loss of semantic object attention
+- 📉 Explanation quality degrades together with OOD robustness
+
 
 ---
 
@@ -330,15 +405,18 @@ The backdoor experiment (Ex 5.5) demonstrated that poisoning just **171 training
 
 A full evaluation and safety analysis report is available in [`report/CARLA_ML_Safety_Report.pdf`](report/CARLA_ML_Safety_Report.pdf), covering:
 
-- Dataset exploration & class distribution analysis
-- Training convergence analysis
-- Per-model evaluation with metric tables
-- Full robustness results (fog, night, town-01)
-- ODD gap analysis
-- Unsafe Control Actions (UCAs) and safety constraints
-- Temperature scaling analysis (Ex 5.4)
-- Backdoor attack results and safety implications (Ex 5.5)
-- Recommendations for improvement
+- Dataset exploration & class imbalance analysis
+- Model architecture & training convergence
+- Baseline evaluation metrics
+- ODD robustness evaluation (fog, night, Town-01)
+- Safety constraints & STPA integration
+- Temperature scaling calibration analysis
+- Backdoor attack robustness evaluation
+- Grad-CAM explainability analysis
+- Misclassification diagnostics
+- Explainability under OOD conditions
+- Spurious correlation and shortcut-learning analysis
+- Safety-oriented recommendation
 
 ---
 
@@ -357,6 +435,8 @@ This project was developed as part of **Introduction to Machine Learning Safety*
 | Ex 4.7 | Per-class evaluation & confusion matrices |
 | Ex 5.4 | Temperature scaling & safety constraint calibration |
 | Ex 5.5 | Backdoor attack — data poisoning & ASR evaluation |
+| Ex 6.5 | Grad-CAM explainability analysis |
+| Ex 6.6 | Explainability as diagnostic tool under OOD |
 
 ---
 
