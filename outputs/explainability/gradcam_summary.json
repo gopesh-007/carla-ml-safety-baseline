@@ -1,0 +1,68 @@
+{
+  "pedestrian": {
+    "baseline_accuracy": 0.905,
+    "ood": {
+      "fog": {
+        "accuracy": 0.905,
+        "n_correct": 181,
+        "n_total": 200
+      },
+      "night": {
+        "accuracy": 0.905,
+        "n_correct": 181,
+        "n_total": 200
+      },
+      "town01": {
+        "accuracy": 0.98,
+        "n_correct": 196,
+        "n_total": 200
+      }
+    },
+    "n_correct_found": 5,
+    "n_wrong_found": 3
+  },
+  "traffic_light": {
+    "baseline_accuracy": 0.85,
+    "ood": {
+      "fog": {
+        "accuracy": 0.745,
+        "n_correct": 149,
+        "n_total": 200
+      },
+      "night": {
+        "accuracy": 0.15,
+        "n_correct": 30,
+        "n_total": 200
+      },
+      "town01": {
+        "accuracy": 0.57,
+        "n_correct": 114,
+        "n_total": 200
+      }
+    },
+    "n_correct_found": 5,
+    "n_wrong_found": 3
+  },
+  "vehicle": {
+    "baseline_accuracy": 0.66,
+    "ood": {
+      "fog": {
+        "accuracy": 0.66,
+        "n_correct": 132,
+        "n_total": 200
+      },
+      "night": {
+        "accuracy": 0.66,
+        "n_correct": 132,
+        "n_total": 200
+      },
+      "town01": {
+        "accuracy": 0.645,
+        "n_correct": 129,
+        "n_total": 200
+      }
+    },
+    "n_correct_found": 5,
+    "n_wrong_found": 3
+  }
+}
