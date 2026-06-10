@@ -112,9 +112,8 @@ carla_baseline_project/
 │   ├── evaluate_temperature_scaling.py      # Ex 5.4 — temperature scaling
 │   ├── plot_temperature_distribution.py     # Ex 5.4 — probability distribution plot
 │   ├── train_pedestrian_backdoor.py         # Ex 5.5 — backdoor poisoning + retrain
-│   ├── evaluate_backdoor.py                 # Ex 5.5 — clean recall + ASR
-│   ├── explain_gradcam.py                   # Exercise 6 — Grad-CAM analysis - Generate Grad-CAM explanations
-│   └── simulate_gradcam.py                  # Simulate and visualize explainability results
+│   ├── evaluate_backdoor.py                 # Ex 5.5 — clean recall + ASR                  
+│   └── gradcam_analysis.py                  # Exercise 6 — Grad-CAM analysis - Generate Grad-CAM explanations
 │
 ├── notebooks/
 │   └── dataset_exploration.ipynb            # Dataset exploration & visualisations
@@ -224,6 +223,9 @@ matplotlib
 scikit-learn
 Pillow
 jupyter
+grad-cam
+opencv-python
+matplotlib
 ```
 ---
 
@@ -288,11 +290,9 @@ python evaluate_backdoor.py
 ### Exercise 6 — Explainability & Grad-CAM
 
 ```bash
-# Generate Grad-CAM explanations
-python explain_gradcam.py
+# Generate Grad-CAM
+python gradcam_analysis.py
 
-# Simulate and visualize explainability results
-python simulate_gradcam.py
 ```
 ### Generated Outputs
 
