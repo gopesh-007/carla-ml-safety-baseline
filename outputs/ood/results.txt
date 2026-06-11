@@ -1,0 +1,13 @@
+==============================
+OOD DETECTION RESULTS
+==============================
+Fog AUROC: 0.8104
+Night AUROC: 0.0000
+Town01 AUROC: 0.6539
+
+==============================
+k-NN OOD RESULTS
+==============================
+Fog AUROC: 0.9844
+Night AUROC: 1.0000
+Town01 AUROC: 0.8956
