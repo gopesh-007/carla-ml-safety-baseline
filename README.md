@@ -20,7 +20,17 @@ Each model takes a single **front-facing RGB camera image** as input and outputs
 
 The models' outputs feed directly into a vehicle's **autopilot decision logic**, making recall and robustness the primary safety metrics.
 
-This project also includes a full **ODD (Operational Design Domain) robustness evaluation** under fog, night, and domain-shift conditions, plus **temperature scaling** and **backdoor attack** analysis — forming evidence toward a complete safety case.
+This project also includes a complete robustness and safety evaluation pipeline covering:
+
+* ODD robustness evaluation under fog, night, and domain-shift conditions,
+* temperature scaling calibration analysis,
+* backdoor attack evaluation,
+* Grad-CAM explainability analysis,
+* confidence-based OOD detection using Maximum Softmax Probability (MSP),
+* feature-based OOD detection using k-Nearest Neighbors (k-NN),
+* and STPA-based safety analysis extensions for distributional robustness failures.
+
+Together, these experiments form evidence toward a structured machine-learning safety case for autonomous driving perception systems.
 
 ---
 
@@ -91,6 +101,47 @@ Grad-CAM explainability analysis was applied to all three CARLA perception model
 
 ---
 
+## 🌍 Out-of-Distribution (OOD) Detection & Robustness Analysis (Exercise 7)
+
+Out-of-distribution (OOD) detection experiments were conducted to evaluate whether the perception models can recognize environmental conditions outside their training distribution.
+
+The pedestrian detection model was evaluated on:
+- Foggy weather conditions
+- Nighttime illumination conditions
+- Town-01 domain-shift scenarios
+
+Two OOD detection approaches were implemented:
+1. **Maximum Softmax Probability (MSP)** baseline
+2. **Feature-based k-Nearest Neighbors (k-NN)** detector
+
+### MSP OOD Detection Results
+
+| Condition | AUROC | Interpretation |
+|---|---|---|
+| Fog | 0.8104 | Good separation |
+| Night | 0.0000 | Complete failure |
+| Town01 | 0.6539 | Moderate separation |
+
+### Feature-Based k-NN OOD Detection Results
+
+| Condition | MSP AUROC | k-NN AUROC |
+|---|---|---|
+| Fog | 0.8104 | 0.9844 |
+| Night | 0.0000 | 1.0000 |
+| Town01 | 0.6539 | 0.8956 |
+
+### Key Findings
+
+- MSP confidence scoring failed catastrophically under nighttime conditions because the model remained highly confident despite severe environmental shift.
+- Feature-based k-NN detection successfully identified nighttime samples as strongly out-of-distribution.
+- Deep feature embeddings captured semantic environmental shifts more reliably than classifier confidence alone.
+- Town-01 represented a weaker semantic domain shift compared to fog and nighttime appearance degradation.
+- OOD failures were strongly correlated with degraded Grad-CAM explainability quality and semantic attention collapse.
+
+> ⚠️ Safety implication: High prediction confidence does not guarantee reliable perception under environmental distribution shift. Feature-space monitoring provides significantly stronger OOD detection capability than confidence-based approaches alone.
+
+---
+
 ## 🗂️ Repository Structure
 
 ```text
@@ -113,7 +164,9 @@ carla_baseline_project/
 │   ├── plot_temperature_distribution.py     # Ex 5.4 — probability distribution plot
 │   ├── train_pedestrian_backdoor.py         # Ex 5.5 — backdoor poisoning + retrain
 │   ├── evaluate_backdoor.py                 # Ex 5.5 — clean recall + ASR                  
-│   └── gradcam_analysis.py                  # Exercise 6 — Grad-CAM analysis - Generate Grad-CAM explanations
+│   ├── gradcam_analysis.py                  # Exercise 6 — Grad-CAM analysis - Generate Grad-CAM explanations
+│   ├── evaluate_ood_msp.py                  # Exercise 7 — MSP-based OOD detection
+│   └── evaluate_ood_knn.py                  # Exercise 7 — Feature-based k-NN OOD detection
 │
 ├── notebooks/
 │   └── dataset_exploration.ipynb            # Dataset exploration & visualisations
@@ -126,6 +179,10 @@ carla_baseline_project/
 │
 ├── outputs/
 │    ├──temperature_distribution.png         # Ex 5.4 distribution plot
+│    ├── ood/
+│    │   ├── plots/
+│    │   │   ├── msp_histogram.png
+│    │   │   └── knn_histogram.png
 │    └── explainability/
 │       ├── pedestrian/
 │       ├── traffic_light/
@@ -294,6 +351,12 @@ python evaluate_backdoor.py
 python gradcam_analysis.py
 
 ```
+
+Generated images are stored in:
+```bash
+outputs/explainability/  
+```
+
 ### Generated Outputs
 
 The scripts produce:
@@ -302,9 +365,40 @@ The scripts produce:
 - OOD condition explainability (fog/night/Town-01)
 - Heatmap visualizations for all three classifiers
 
-Generated images are stored in:
+---
+
+### Exercise 7 — OOD Detection & Distribution Shift Evaluation
+
+#### MSP Baseline OOD Detection
+
 ```bash
-outputs/explainability/  
+python evaluate_ood_msp.py
+```
+
+Generates:
+- MSP confidence histograms
+- AUROC evaluation for fog/night/Town01 conditions
+
+Saved outputs:
+
+```bash
+outputs/ood/plots/msp_histogram.png
+```
+
+#### Feature-Based k-NN OOD Detection
+
+```bash
+python evaluate_ood_knn.py
+```
+
+Generates:
+- Deep feature-space k-NN distance histograms
+- Feature-based AUROC evaluation
+
+Saved outputs:
+
+```bash
+outputs/ood/plots/knn_histogram.png
 ```
 
 ---
@@ -372,6 +466,27 @@ This confirms that:
 - Attention drift can serve as an indicator of OOD degradation
 - Grad-CAM complements robustness testing and calibration analysis within the overall safety case
 
+### OOD Detection as a Safety Monitoring Mechanism
+
+OOD evaluation revealed that the perception models can silently fail under environmental distribution shifts while remaining highly confident.
+
+The most critical failure occurred under nighttime conditions:
+- MSP confidence-based OOD detection completely failed (AUROC = 0.0000)
+- Grad-CAM explanations degraded severely
+- The pedestrian detector remained overconfident despite semantic failure
+
+Feature-based k-NN detection substantially improved robustness monitoring:
+- Nighttime AUROC improved from 0.0000 → 1.0000
+- Fog AUROC improved from 0.8104 → 0.9844
+- Town01 AUROC improved from 0.6539 → 0.8956
+
+These results demonstrate that:
+- confidence alone is insufficient for uncertainty estimation,
+- feature-space monitoring is more reliable for OOD detection,
+- and explainability degradation strongly correlates with environmental robustness failures.
+
+This analysis extends the system-level safety case by explicitly incorporating OOD detection as a runtime safety-monitoring mechanism.
+
 ---
 
 ## 🔍 Key Findings
@@ -385,6 +500,10 @@ This confirms that:
 - ⚠️ Pedestrian detector frequently relies on spurious sky and road-texture correlations
 - 🌙 Night-condition explainability maps show complete loss of semantic object attention
 - 📉 Explanation quality degrades together with OOD robustness
+- 🌍 MSP-based OOD detection failed completely under nighttime conditions (AUROC = 0.0000)
+- 🧠 Feature-based k-NN detection achieved perfect nighttime separation (AUROC = 1.0000)
+- ⚠️ High classifier confidence does not guarantee safe perception under environmental shift
+- 🔍 Deep feature embeddings are substantially more reliable for OOD detection than output confidence alone
 
 
 ---
@@ -398,6 +517,9 @@ This confirms that:
 5. **Larger backbone** (ResNet-50 or EfficientNet-B0) for better small-object detection
 6. **Data provenance checks** — verify training data integrity to guard against poisoning attacks
 7. **Backdoor detection** — apply spectral signatures or activation clustering before deploying any retrained model
+8. Integrate feature-based OOD monitoring into runtime safety architecture
+9. Retrain models with nighttime and adverse-weather augmentation
+10. Add uncertainty-aware fallback logic for detected OOD conditions
 
 ---
 
@@ -437,6 +559,14 @@ This project was developed as part of **Introduction to Machine Learning Safety*
 | Ex 5.5 | Backdoor attack — data poisoning & ASR evaluation |
 | Ex 6.5 | Grad-CAM explainability analysis |
 | Ex 6.6 | Explainability as diagnostic tool under OOD |
+| Ex 7.1 | OOD problem & silent failure analysis |
+| Ex 7.2 | MSP baseline OOD detection |
+| Ex 7.3 | Advanced OOD detection methods |
+| Ex 7.4 | Distribution shift visualization |
+| Ex 7.5 | ODD vs OOD interpretation |
+| Ex 7.6 | AUROC evaluation of MSP |
+| Ex 7.7 | Feature-based k-NN OOD detection |
+| Ex 7.8 | STPA extension for OOD safety risks |
 
 ---
 
