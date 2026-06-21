@@ -29,6 +29,9 @@ This project also includes a complete robustness and safety evaluation pipeline 
 * confidence-based OOD detection using Maximum Softmax Probability (MSP),
 * feature-based OOD detection using k-Nearest Neighbors (k-NN),
 * and STPA-based safety analysis extensions for distributional robustness failures.
+* untargeted FGSM adversarial robustness evaluation for all three classifiers,
+* adversarial recall-drop analysis at ε ∈ {0.01, 0.05, 0.1},
+* and STPA safety-analysis extensions for adversarial perception failures.
 
 Together, these experiments form evidence toward a structured machine-learning safety case for autonomous driving perception systems.
 
@@ -140,7 +143,41 @@ Two OOD detection approaches were implemented:
 
 > ⚠️ Safety implication: High prediction confidence does not guarantee reliable perception under environmental distribution shift. Feature-space monitoring provides significantly stronger OOD detection capability than confidence-based approaches alone.
 
----
+
+## ⚔️ Adversarial Robustness with FGSM (Exercise 8)
+
+An untargeted Fast Gradient Sign Method (FGSM) attack was applied to all three binary classifiers.
+
+The adversarial image is generated using:
+
+```text
+x_adv = x + ε · sign(∇x L(y, f(x)))
+```
+The implementation uses:
+BCEWithLogitsLoss
+gradients with respect to the input image
+pixel clamping to [0, 1]
+ε values of 0.01, 0.05, and 0.1
+a reproducible random sample of 100 validation images using seed 42
+
+| Model | Clean Recall | Recall @ 0.01 | Drop @ 0.01 | Recall @ 0.05 | Drop @ 0.05 | Recall @ 0.1 | Drop @ 0.1 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Pedestrian | 0.1923 | 0.0000 | 0.1923 | 0.0000 | 0.1923 | 0.0000 | 0.1923 |
+| Traffic Light | 0.8987 | 0.0886 | 0.8101 | 0.0000 | 0.8987 | 0.1519 | 0.7468 |
+| Vehicle | 0.8596 | 0.5614 | 0.2982 | 0.0351 | 0.8246 | 0.3860 | 0.4737 |
+
+### Key Adversarial Findings
+
+- The pedestrian model's recall dropped to **0.0000** for every tested epsilon.
+- The traffic-light model lost most of its recall at `epsilon = 0.01`.
+- At `epsilon = 0.05`, traffic-light recall collapsed completely.
+- Vehicle recall dropped from **0.8596** to **0.0351** at `epsilon = 0.05`.
+- Perturbations were mostly imperceptible at `epsilon = 0.01`.
+- Visible image noise appeared around `epsilon = 0.05`.
+- At `epsilon = 0.1`, perturbations were clearly visible.
+- Recall was not strictly monotonic. Clipping and decision-boundary effects can make a larger one-step FGSM perturbation less effective for some samples.
+
+> ⚠️ Safety implication: Small adversarial perturbations can produce safety-critical false negatives while leaving the image visually similar to the clean input. Standard clean-test performance is therefore insufficient evidence of safe perception.
 
 ## 🗂️ Repository Structure
 
@@ -148,56 +185,93 @@ Two OOD detection approaches were implemented:
 carla_baseline_project/
 │
 ├── scripts/
-│   ├── train_pedestrian.py                  # Train pedestrian classifier (baseline)
-│   ├── train_traffic_light.py               # Train traffic light classifier
-│   ├── train_vehicle.py                     # Train vehicle classifier
-│   ├── evaluate_pedestrian.py               # Evaluate on standard test set
-│   ├── evaluate_traffic_light.py
-│   ├── evaluate_vehicle.py
-│   ├── evaluate_pedestrian_fog.py           # Robustness: fog
-│   ├── evaluate_pedestrian_night.py         # Robustness: night
-│   ├── evaluate_pedestrian_town.py          # Robustness: town-01 domain shift
-│   ├── evaluate_traffic_light_fog.py
-│   ├── evaluate_traffic_light_night.py
-│   ├── evaluate_traffic_light_town.py
-│   ├── evaluate_temperature_scaling.py      # Ex 5.4 — temperature scaling
-│   ├── plot_temperature_distribution.py     # Ex 5.4 — probability distribution plot
-│   ├── train_pedestrian_backdoor.py         # Ex 5.5 — backdoor poisoning + retrain
-│   ├── evaluate_backdoor.py                 # Ex 5.5 — clean recall + ASR                  
-│   ├── gradcam_analysis.py                  # Exercise 6 — Grad-CAM analysis - Generate Grad-CAM explanations
-│   ├── evaluate_ood_msp.py                  # Exercise 7 — MSP-based OOD detection
-│   └── evaluate_ood_knn.py                  # Exercise 7 — Feature-based k-NN OOD detection
+│   ├── train_pedestrian.py                    # Train pedestrian classifier
+│   ├── train_traffic_light.py                 # Train traffic-light classifier
+│   ├── train_vehicle.py                       # Train vehicle classifier
+│   │
+│   ├── evaluate_pedestrian.py                 # Standard pedestrian evaluation
+│   ├── evaluate_traffic_light.py              # Standard traffic-light evaluation
+│   ├── evaluate_vehicle.py                    # Standard vehicle evaluation
+│   │
+│   ├── evaluate_pedestrian_fog.py             # Robustness: fog
+│   ├── evaluate_pedestrian_night.py           # Robustness: night
+│   ├── evaluate_pedestrian_town.py            # Robustness: Town-01
+│   ├── evaluate_traffic_light_fog.py          # Robustness: fog
+│   ├── evaluate_traffic_light_night.py        # Robustness: night
+│   ├── evaluate_traffic_light_town.py         # Robustness: Town-01
+│   │
+│   ├── evaluate_temperature_scaling.py        # Ex 5.4: temperature scaling
+│   ├── plot_temperature_distribution.py       # Ex 5.4: probability plot
+│   ├── train_pedestrian_backdoor.py           # Ex 5.5: backdoor training
+│   ├── evaluate_backdoor.py                   # Ex 5.5: clean recall and ASR
+│   │
+│   ├── gradcam_analysis.py                    # Ex 6: Grad-CAM analysis
+│   │
+│   ├── evaluate_ood_msp.py                    # Ex 7: MSP OOD detection
+│   ├── evaluate_ood_knn.py                    # Ex 7: k-NN OOD detection
+│   │
+│   └── evaluate_adversarial.py                # Ex 8: FGSM robustness evaluation
 │
 ├── notebooks/
-│   └── dataset_exploration.ipynb            # Dataset exploration & visualisations
+│   ├── dataset_exploration.ipynb              # Dataset exploration
+│   └── evaluate_adversarial_walkthrough.ipynb # Ex 8 classroom walkthrough
+│                                               
+├── data/                                      # Dataset not tracked by Git
+│   ├── train/
+│   ├── validation/
+│   │   ├── rgb-front/
+│   │   └── labels.csv
+│   ├── test/
+│   ├── test-fog/
+│   ├── test-night/
+│   └── test-town-01/
 │
-├── models/                                  # Saved .pth model weights (not tracked)
+├── models/                                    # Model weights not tracked
 │   ├── pedestrian_model.pth
 │   ├── traffic_light_model.pth
 │   ├── vehicle_model.pth
-│   └── pedestrian_model_backdoor.pth        # Backdoored model (Ex 5.5)
+│   └── pedestrian_model_backdoor.pth          # Ex 5.5 backdoored model
 │
 ├── outputs/
-│    ├──temperature_distribution.png         # Ex 5.4 distribution plot
-│    ├── ood/
-│    │   ├── plots/
-│    │   │   ├── msp_histogram.png
-│    │   │   └── knn_histogram.png
-│    └── explainability/
-│       ├── pedestrian/
-│       ├── traffic_light/
-│       ├── vehicle/
-│       ├── baseline/
-│       ├── fog/
-│       ├── night/
-│       └── town01/
+│   ├── temperature_distribution.png           # Ex 5.4 plot
+│   │
+│   ├── ood/
+│   │   └── plots/
+│   │       ├── msp_histogram.png
+│   │       └── knn_histogram.png
+│   │
+│   ├── explainability/
+│   │   ├── pedestrian/
+│   │   ├── traffic_light/
+│   │   ├── vehicle/
+│   │   ├── baseline/
+│   │   ├── fog/
+│   │   ├── night/
+│   │   └── town01/
+│   │
+│   └── adversarial/
+│       ├── adversarial_results.csv            # Accuracy, recall, drop and F1
+│       │
+│       ├── plots/
+│       │   └── recall_vs_epsilon.png
+│       │
+│       └── examples/
+│           ├── pedestrian_eps_001.png
+│           ├── pedestrian_eps_005.png
+│           ├── pedestrian_eps_01.png
+│           ├── traffic_light_eps_001.png
+│           ├── traffic_light_eps_005.png
+│           ├── traffic_light_eps_01.png
+│           ├── vehicle_eps_001.png
+│           ├── vehicle_eps_005.png
+│           └── vehicle_eps_01.png
 │
 ├── report/
-│   └── CARLA_ML_Safety_Report.pdf           # Full evaluation & safety analysis report
+│   └── CARLA_ML_Safety_Report.pdf             # Complete safety report
 │
-├── requirements.txt
-├── README.md
-└── .gitignore
+├── requirements.txt                           # Python dependencies
+├── README.md                                  # Project documentation
+└── .gitignore                                 # Ignored data, models and cache files
 ```
 
 ---
@@ -401,6 +475,27 @@ Saved outputs:
 outputs/ood/plots/knn_histogram.png
 ```
 
+### Exercise 8 — FGSM Adversarial Robustness
+
+Evaluate a reproducible random sample of 100 validation images:
+
+```bash
+python evaluate_adversarial.py \
+  --limit 100 \
+  --sample-mode random \
+  --seed 42
+```
+Generated outputs are stored in:
+```bash
+outputs/adversarial/
+├── adversarial_results.csv
+├── examples/
+└── plots/recall_vs_epsilon.png
+```
+
+The CSV contains:
+model, epsilon, accuracy, recall, recall_drop, f1
+
 ---
 
 ## 🛡️ Safety Analysis
@@ -487,6 +582,30 @@ These results demonstrate that:
 
 This analysis extends the system-level safety case by explicitly incorporating OOD detection as a runtime safety-monitoring mechanism.
 
+### Adversarial Robustness Safety Analysis
+
+The FGSM evaluation extends the original STPA analysis with an explicit adversarial-input hazard:
+
+- **H-6:** The vehicle continues autonomous driving while adversarially perturbed camera input causes false-negative or unreliable perception output without detection.
+- **UCA-9:** The Planning Module provides a continue-driving command while acting on adversarially corrupted perception feedback.
+- **Linked hazards:** H-1, H-2, H-4, and H-6.
+- **Linked losses:** L-1, L-2, and L-3.
+
+New safety constraints:
+
+| ID | Level | Constraint |
+|---|---|---|
+| SC-9a | Model-level | For FGSM perturbations with `ε ≤ 0.01`, recall drop must not exceed 0.10 and recall must not collapse to zero. |
+| SC-9b | System-level | When anomalous input, inconsistent perception, or suspected adversarial activity is detected, the planner must reduce speed and enter a safe fallback mode. |
+
+All three classifiers currently violate SC-9a at `ε = 0.01`:
+
+- Pedestrian recall drop: `0.1923`
+- Traffic-light recall drop: `0.8101`
+- Vehicle recall drop: `0.2982`
+
+Adversarial training can reduce this risk but cannot eliminate it. Residual risks include stronger attacks, unseen perturbation types, physical-world attacks, OOD conditions, sensor failures, and unsafe planner behavior.
+
 ---
 
 ## 🔍 Key Findings
@@ -504,6 +623,11 @@ This analysis extends the system-level safety case by explicitly incorporating O
 - 🧠 Feature-based k-NN detection achieved perfect nighttime separation (AUROC = 1.0000)
 - ⚠️ High classifier confidence does not guarantee safe perception under environmental shift
 - 🔍 Deep feature embeddings are substantially more reliable for OOD detection than output confidence alone
+- ⚔️ Untargeted FGSM reduced pedestrian recall to zero at every tested ε
+- 🚦 Traffic-light recall dropped by 0.8101 at ε=0.01
+- 🚗 Vehicle recall dropped by 0.8246 at ε=0.05
+- ⚠️ Small, mostly imperceptible perturbations caused safety-critical false negatives
+- 🛡️ Adversarial training must be combined with anomaly detection and system-level fallback
 
 
 ---
@@ -520,6 +644,10 @@ This analysis extends the system-level safety case by explicitly incorporating O
 8. Integrate feature-based OOD monitoring into runtime safety architecture
 9. Retrain models with nighttime and adverse-weather augmentation
 10. Add uncertainty-aware fallback logic for detected OOD conditions
+11. Add adversarial training using FGSM and stronger iterative attacks such as PGD
+12. Evaluate adversarial robustness across multiple random seeds and attack budgets
+13. Add runtime adversarial-input and temporal-consistency monitoring
+14. Trigger automatic speed reduction or safe stopping when suspicious input is detected
 
 ---
 
@@ -567,7 +695,12 @@ This project was developed as part of **Introduction to Machine Learning Safety*
 | Ex 7.6 | AUROC evaluation of MSP |
 | Ex 7.7 | Feature-based k-NN OOD detection |
 | Ex 7.8 | STPA extension for OOD safety risks |
-
+| Ex 8.1 | Adversarial examples vs. OOD examples |
+| Ex 8.2 | Gradient-based attack formulation |
+| Ex 8.3 | Adversarial training and robustness trade-offs |
+| Ex 8.4 | Untargeted FGSM attack implementation |
+| Ex 8.5 | Recall and recall-drop robustness evaluation |
+| Ex 8.6 | STPA extension for adversarial perception failures |
 ---
 
 ## 📜 License
