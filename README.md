@@ -214,7 +214,7 @@ carla_baseline_project/
 │
 ├── notebooks/
 │   ├── dataset_exploration.ipynb              # Dataset exploration
-│   └── evaluate_adversarial_walkthrough.ipynb # Ex 8 classroom walkthrough
+│   └── evaluate_adversarial_walkthrough.ipynb # Ex 8 walkthrough
 │                                               
 ├── data/                                      # Dataset not tracked by Git
 │   ├── train/
