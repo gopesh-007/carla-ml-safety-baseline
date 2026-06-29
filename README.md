@@ -576,6 +576,24 @@ outputs/adversarial/
 The CSV contains:
 model, epsilon, accuracy, recall, recall_drop, f1
 
+### Exercise 9 — Uncertainty Calibration and Cost-Sensitive Decisions
+
+```bash
+python evaluate_uncertainty.py
+```
+
+This script performs:
+- ECE computation for all three classifiers
+- reliability diagram generation
+- temperature search on the validation set
+- calibrated test-set evaluation
+- pedestrian cost-sensitive decision analysis
+
+Generated outputs:
+```bash
+outputs/uncertainty/
+```
+
 ---
 
 ## 🛡️ Safety Analysis
