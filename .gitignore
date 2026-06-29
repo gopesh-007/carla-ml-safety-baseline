@@ -6,5 +6,6 @@ __pycache__/
 data/
 *.pth.matplotlib_cache/
 .matplotlib_cache/
+tmp/
 
 models/

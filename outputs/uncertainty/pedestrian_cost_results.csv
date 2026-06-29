@@ -1,0 +1,5 @@
+calibration,threshold_name,threshold,false_negatives,false_positives,total_loss
+uncalibrated,0.5,0.5,630,429,63429
+uncalibrated,tau_star,0.009900990099009901,48,2629,7429
+calibrated,0.5,0.5,630,429,63429
+calibrated,tau_star,0.009900990099009901,0,2894,2894
