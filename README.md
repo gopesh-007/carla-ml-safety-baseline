@@ -179,6 +179,77 @@ a reproducible random sample of 100 validation images using seed 42
 
 > ⚠️ Safety implication: Small adversarial perturbations can produce safety-critical false negatives while leaving the image visually similar to the clean input. Standard clean-test performance is therefore insufficient evidence of safe perception.
 
+## 🎯 Uncertainty, Calibration & Cost-Sensitive Decisions (Exercise 9)
+
+Exercise 9 evaluates whether the perception models' confidence scores can be trusted for safety-critical downstream decisions.
+
+The uncertainty pipeline measures:
+
+- Expected Calibration Error (ECE)
+- reliability diagrams
+- validation-set temperature scaling
+- calibrated vs. uncalibrated confidence behaviour
+- cost-sensitive pedestrian braking decisions
+
+The implementation is in:
+```bash
+scripts/evaluate_uncertainty.py
+```
+
+Generated outputs are stored in:
+```bash
+outputs/uncertainty/
+├── calibration_results.csv
+├── pedestrian_cost_results.csv
+├── reliability_bins.csv
+├── reliability_diagrams.png
+└── temperature_search.csv
+```
+
+Calibration Results:
+| Model | Best T | ECE Before | ECE After | Test Accuracy | Pattern Before | Pattern After |
+|---|---:|---:|---:|---:|---|---|
+| Pedestrian | 3.0 | 0.1477 | 0.0385 | 0.7058 | Overconfident | Slightly underconfident |
+| Traffic Light | 1.2 | 0.0349 | 0.0246 | 0.9206 | Overconfident | Overconfident |
+| Vehicle | 0.9 | 0.0286 | 0.0177 | 0.7875 | Underconfident | Underconfident |
+
+Key Calibration Findings:
+- The pedestrian model was strongly overconfident before calibration.
+- Temperature scaling reduced pedestrian ECE from 0.1477 to 0.0385.
+- Traffic-light and vehicle models were already better calibrated, but still improved after temperature scaling.
+- Accuracy did not change after temperature scaling because temperature scaling only rescales confidence, not the final predicted class.
+- The pedestrian model selected T = 3.0, which is the upper end of the tested grid, suggesting strong overconfidence.
+
+Cost-Sensitive Pedestrian Decision:
+For pedestrian braking, the assumed costs were:
+```text
+False negative cost: C_FN = 100
+False positive cost: C_FP = 1
+```
+The cost-optimal braking threshold is:
+```text
+tau* = C_FP / (C_FN + C_FP) = 1 / 101 ≈ 0.0099
+```
+
+| Calibration | Threshold | False Negatives | False Positives | Total Loss |
+|---|---:|---:|---:|---:|
+| Uncalibrated | 0.5 | 630 | 429 | 63,429 |
+| Uncalibrated | 0.0099 | 48 | 2,629 | 7,429 |
+| Calibrated | 0.5 | 630 | 429 | 63,429 |
+| Calibrated | 0.0099 | 0 | 2,894 | 2,894 |
+
+Safety Interpretation:
+
+The calibrated cost-optimal threshold produced the lowest total loss and eliminated pedestrian false negatives on the test set. However, it also caused many false positives, meaning the vehicle would brake extremely often.
+
+This shows the central safety trade-off:
+- a standard 0.5 threshold is unsafe because it misses too many pedestrians,
+- a cost-sensitive threshold greatly reduces safety-critical misses,
+- calibration is necessary before using probabilities for downstream decisions,
+- but a very low threshold may harm availability and comfort.
+
+> ⚠️ Safety implication: calibrated probabilities are useful for risk-aware planning, but calibration alone is not enough. The planner still needs fallback logic, OOD detection, temporal consistency checks, and additional sensor redundancy.
+
 ## 🗂️ Repository Structure
 
 ```text
@@ -210,8 +281,10 @@ carla_baseline_project/
 │   ├── evaluate_ood_msp.py                    # Ex 7: MSP OOD detection
 │   ├── evaluate_ood_knn.py                    # Ex 7: k-NN OOD detection
 │   │
-│   └── evaluate_adversarial.py                # Ex 8: FGSM robustness evaluation
-│
+│   ├── evaluate_adversarial.py                # Ex 8: FGSM robustness evaluation
+│   │
+│   └── evaluate_uncertainty.py                # Ex 9: ECE, temperature scaling, cost-sensitive decisions
+│   
 ├── notebooks/
 │   ├── dataset_exploration.ipynb              # Dataset exploration
 │   └── evaluate_adversarial_walkthrough.ipynb # Ex 8 walkthrough
@@ -249,22 +322,29 @@ carla_baseline_project/
 │   │   ├── night/
 │   │   └── town01/
 │   │
-│   └── adversarial/
-│       ├── adversarial_results.csv            # Accuracy, recall, drop and F1
-│       │
-│       ├── plots/
-│       │   └── recall_vs_epsilon.png
-│       │
-│       └── examples/
-│           ├── pedestrian_eps_001.png
-│           ├── pedestrian_eps_005.png
-│           ├── pedestrian_eps_01.png
-│           ├── traffic_light_eps_001.png
-│           ├── traffic_light_eps_005.png
-│           ├── traffic_light_eps_01.png
-│           ├── vehicle_eps_001.png
-│           ├── vehicle_eps_005.png
-│           └── vehicle_eps_01.png
+│   ├── adversarial/
+│   │    ├── adversarial_results.csv            # Accuracy, recall, drop and F1
+│   │    │
+│   │    ├── plots/
+│   │    │   └── recall_vs_epsilon.png
+│   │    │
+│   │    └── examples/
+│   │        ├── pedestrian_eps_001.png
+│   │        ├── pedestrian_eps_005.png
+│   │        ├── pedestrian_eps_01.png
+│   │        ├── traffic_light_eps_001.png
+│   │        ├── traffic_light_eps_005.png
+│   │        ├── traffic_light_eps_01.png
+│   │        ├── vehicle_eps_001.png
+│   │        ├── vehicle_eps_005.png
+│   │        └── vehicle_eps_01.png
+│   │
+│   └── uncertainty/
+│        ├── calibration_results.csv            # ECE and temperature scaling summary
+│        ├── pedestrian_cost_results.csv        # Cost-sensitive braking results
+│        ├── reliability_bins.csv               # Reliability-bin statistics
+│        ├── reliability_diagrams.png           # Calibration plots
+│        └── temperature_search.csv             # Validation NLL search over T
 │
 ├── report/
 │   └── CARLA_ML_Safety_Report.pdf             # Complete safety report
@@ -628,6 +708,11 @@ Adversarial training can reduce this risk but cannot eliminate it. Residual risk
 - 🚗 Vehicle recall dropped by 0.8246 at ε=0.05
 - ⚠️ Small, mostly imperceptible perturbations caused safety-critical false negatives
 - 🛡️ Adversarial training must be combined with anomaly detection and system-level fallback
+- 🎯 Temperature scaling reduced pedestrian ECE from 0.1477 to 0.0385
+- ⚠️ The pedestrian classifier was strongly overconfident before calibration
+- 📉 Calibration improved confidence reliability without changing accuracy
+- 🛑 Cost-sensitive pedestrian braking with tau* ≈ 0.0099 reduced total loss from 63,429 to 2,894 after calibration
+- ⚠️ The safest cost-sensitive threshold eliminated false negatives but caused many false positives, showing a safety-vs-availability trade-off
 
 
 ---
@@ -648,6 +733,10 @@ Adversarial training can reduce this risk but cannot eliminate it. Residual risk
 12. Evaluate adversarial robustness across multiple random seeds and attack budgets
 13. Add runtime adversarial-input and temporal-consistency monitoring
 14. Trigger automatic speed reduction or safe stopping when suspicious input is detected
+15. Use calibrated probabilities for downstream safety decisions instead of raw sigmoid scores
+16. Validate calibration under OOD conditions, not only on the standard test set
+17. Tune cost-sensitive decision thresholds jointly with planner-level comfort and availability constraints
+18. Add runtime monitoring for calibration drift and uncertainty under distribution shift
 
 ---
 
@@ -701,6 +790,13 @@ This project was developed as part of **Introduction to Machine Learning Safety*
 | Ex 8.4 | Untargeted FGSM attack implementation |
 | Ex 8.5 | Recall and recall-drop robustness evaluation |
 | Ex 8.6 | STPA extension for adversarial perception failures |
+| Ex 9.1 | Epistemic vs. aleatoric uncertainty |
+| Ex 9.2 | Calibration, reliability diagrams, and ECE |
+| Ex 9.3 | Cost-optimal downstream decision thresholds |
+| Ex 9.4 | ECE measurement for all classifiers |
+| Ex 9.5 | Temperature scaling calibration |
+| Ex 9.6 | Cost-sensitive pedestrian braking evaluation |
+| Ex 9.7 | STPA extension for uncertainty and calibration failures |
 ---
 
 ## 📜 License
