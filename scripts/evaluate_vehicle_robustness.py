@@ -18,6 +18,7 @@ from torchvision import models, transforms
 
 
 CONDITIONS = {
+    "standard": ("../data/test", "Standard Test Set"),
     "fog": ("../data/test-fog", "Fog"),
     "night": ("../data/test-night", "Night"),
     "town": ("../data/test-town-01", "Town-01"),
@@ -64,6 +65,11 @@ def parse_arguments(default_condition=None):
         help="Number of images evaluated together (default: 128).",
     )
     parser.add_argument(
+        "--checkpoint",
+        default="../models/vehicle_model.pth",
+        help="Vehicle checkpoint to evaluate.",
+    )
+    parser.add_argument(
         "--start",
         type=int,
         default=0,
@@ -95,7 +101,7 @@ def main(default_condition=None):
     model = models.resnet18(weights=None)
     model.fc = nn.Linear(model.fc.in_features, 1)
     model.load_state_dict(
-        torch.load("../models/vehicle_model.pth", weights_only=True)
+        torch.load(args.checkpoint, weights_only=True)
     )
     model = model.to(device)
     model.eval()

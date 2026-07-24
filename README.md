@@ -75,6 +75,18 @@ All vehicle ODD results below use the same trained checkpoint and a sigmoid deci
 
 The fog result illustrates why recall and F1 cannot be considered in isolation: the classifier predicts **vehicle present for 3,599 of 3,600 frames**, preserving recall while causing 814 unnecessary positive detections. At night, it misses 1,748 of 2,785 vehicles, making the model unsafe for night driving. Town-01 also reduces F1 from 0.8577 on the standard test set to 0.7187, confirming sensitivity to map/domain shift.
 
+### ODD Test Coverage
+
+The supplied labelled test splits cover four observed scenarios, each with 3,600 frames: dry daylight in the source town, fog in the source town, rainy night in the source town, and dry daylight in Town-01. For the three recorded context factors — weather (`dry`, `fog`, `rain`), lighting (`day`, `night`), and town (`source_town`, `town_01`) — the reproducible k-projection coverage is:
+
+| k | Observed / possible combinations | Coverage | Interpretation |
+|---|---:|---:|---|
+| 1 | 7 / 7 | 100.0% | Every individual factor value is represented. |
+| 2 | 10 / 16 | 62.5% | Several weather–lighting and weather–town pairings are absent. |
+| 3 | 4 / 12 | 33.3% | Only four complete weather–lighting–town scenarios were tested. |
+
+This is not a claim of complete ODD coverage: weather, lighting, and town are strongly coupled in the supplied scenarios. In particular, there is no night-in-Town-01, fog-in-Town-01, or rainy-day evaluation. Performance claims therefore remain limited to the exact tested scenario, while fog, night, and Town-01 are treated as robustness/OOD evidence rather than validated operating conditions.
+
 ### Temperature Scaling (Exercise 5.4)
 
 | Temperature T | Accuracy | Recall | Below Safety θ=0.6 | Safety Behaviour |
@@ -123,11 +135,6 @@ Grad-CAM explainability analysis was applied to all three CARLA perception model
 
 Out-of-distribution (OOD) detection experiments were conducted to evaluate whether the perception models can recognize environmental conditions outside their training distribution.
 
-The pedestrian detection model was evaluated on:
-- Foggy weather conditions
-- Nighttime illumination conditions
-- Town-01 domain-shift scenarios
-
 Two OOD detection approaches were implemented:
 1. **Maximum Softmax Probability (MSP)** baseline
 2. **Feature-based k-Nearest Neighbors (k-NN)** detector
@@ -142,11 +149,15 @@ Two OOD detection approaches were implemented:
 
 ### Feature-Based k-NN OOD Detection Results
 
-| Condition | MSP AUROC | k-NN AUROC |
-|---|---|---|
-| Fog | 0.8104 | 0.9844 |
-| Night | 0.0000 | 1.0000 |
-| Town01 | 0.6539 | 0.8956 |
+Feature-based k-NN detection was evaluated for all three classifiers using 1,000 deterministic validation images and 1,000 images from each OOD condition. The suggested safety-case threshold is AUROC ≥ 0.90.
+
+| Model | Fog AUROC | Night AUROC | Town-01 AUROC | Verdict |
+|---|---:|---:|---:|---|
+| Pedestrian | 0.9844 | 1.0000 | 0.8956 | Partial — Town-01 is below threshold |
+| Traffic Light | 0.9698 | 1.0000 | 0.9556 | Met |
+| Vehicle | 0.9940 | 0.9971 | 0.8274 | Partial — Town-01 is below threshold |
+
+The MSP baseline above was evaluated for the pedestrian detector only. It is retained as a confidence-based baseline; the final safety-case evidence uses feature-based k-NN because it gives substantially stronger separation for environmental OOD inputs.
 
 ### Key Findings
 
@@ -299,6 +310,8 @@ carla_baseline_project/
 │   │
 │   ├── evaluate_ood_msp.py                    # Ex 7: MSP OOD detection
 │   ├── evaluate_ood_knn.py                    # Ex 7: k-NN OOD detection
+│   ├── evaluate_ood_knn_all_models.py          # Ex 7: k-NN OOD detection for all models
+│   ├── evaluate_odd_coverage.py                # ODD k-projection coverage
 │   │
 │   ├── evaluate_adversarial.py                # Ex 8: FGSM robustness evaluation
 │   │
@@ -328,9 +341,14 @@ carla_baseline_project/
 │   ├── temperature_distribution.png           # Ex 5.4 plot
 │   │
 │   ├── ood/
+│   │   ├── knn_all_models_results.csv          # All-model k-NN AUROC summary
 │   │   └── plots/
 │   │       ├── msp_histogram.png
 │   │       └── knn_histogram.png
+│   │
+│   ├── odd/
+│   │   ├── odd_test_scenarios.csv              # Context factors per test split
+│   │   └── odd_k_projection_coverage.csv       # 1-, 2-, and 3-way coverage
 │   │
 │   ├── explainability/
 │   │   ├── pedestrian/
@@ -501,6 +519,14 @@ python evaluate_traffic_light_town.py
 python evaluate_vehicle_town.py
 ```
 
+### Measure ODD test coverage
+
+```bash
+python evaluate_odd_coverage.py
+```
+
+This reads the recorded CARLA weather metadata and writes the scenario table and k-projection evidence to `outputs/odd/`.
+
 ### Exercise 5.4 — Temperature Scaling
 
 ```bash
@@ -575,6 +601,18 @@ Saved outputs:
 
 ```bash
 outputs/ood/plots/knn_histogram.png
+```
+
+#### All-Model Feature-Based k-NN OOD Detection
+
+```bash
+python evaluate_ood_knn_all_models.py
+```
+
+This evaluates the pedestrian, traffic-light, and vehicle checkpoints on deterministic validation, fog, night, and Town-01 image subsets. It writes the AUROC evidence table to:
+
+```bash
+outputs/ood/knn_all_models_results.csv
 ```
 
 ### Exercise 8 — FGSM Adversarial Robustness
@@ -691,10 +729,7 @@ The most critical failure occurred under nighttime conditions:
 - Grad-CAM explanations degraded severely
 - The pedestrian detector remained overconfident despite semantic failure
 
-Feature-based k-NN detection substantially improved robustness monitoring:
-- Nighttime AUROC improved from 0.0000 → 1.0000
-- Fog AUROC improved from 0.8104 → 0.9844
-- Town01 AUROC improved from 0.6539 → 0.8956
+Feature-based k-NN detection substantially improved robustness monitoring. For the pedestrian detector, nighttime AUROC improved from 0.0000 to 1.0000, fog AUROC from 0.8104 to 0.9844, and Town-01 AUROC from 0.6539 to 0.8956. The all-model evaluation additionally confirmed that traffic-light k-NN detection passes the 0.90 AUROC threshold in fog, night, and Town-01, while pedestrian and vehicle Town-01 detection remain below the threshold.
 
 These results demonstrate that:
 - confidence alone is insufficient for uncertainty estimation,
@@ -741,7 +776,8 @@ Adversarial training can reduce this risk but cannot eliminate it. Residual risk
 - 🌙 Night-condition explainability maps show complete loss of semantic object attention
 - 📉 Explanation quality degrades together with OOD robustness
 - 🌍 MSP-based OOD detection failed completely under nighttime conditions (AUROC = 0.0000)
-- 🧠 Feature-based k-NN detection achieved perfect nighttime separation (AUROC = 1.0000)
+- 🧠 Feature-based k-NN detection achieved perfect nighttime separation for pedestrian and traffic-light inputs, and 0.9971 AUROC for vehicle inputs
+- ⚠️ Town-01 k-NN OOD detection remains below the 0.90 threshold for pedestrian (0.8956) and vehicle (0.8274)
 - ⚠️ High classifier confidence does not guarantee safe perception under environmental shift
 - 🔍 Deep feature embeddings are substantially more reliable for OOD detection than output confidence alone
 - ⚔️ Untargeted FGSM reduced pedestrian recall to zero at every tested ε

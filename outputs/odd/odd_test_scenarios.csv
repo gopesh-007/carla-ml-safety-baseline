@@ -1,0 +1,5 @@
+split,frames,weather,lighting,town
+test,3600,dry,day,source_town
+test-fog,3600,fog,day,source_town
+test-night,3600,rain,night,source_town
+test-town-01,3600,dry,day,town_01

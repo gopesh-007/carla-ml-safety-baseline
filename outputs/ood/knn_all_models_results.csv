@@ -1,0 +1,10 @@
+model,condition,detector,images_per_set,auroc,threshold,verdict
+pedestrian,fog,feature_kNN_k5,1000,0.984427,0.9,met
+pedestrian,night,feature_kNN_k5,1000,1.0,0.9,met
+pedestrian,town01,feature_kNN_k5,1000,0.8955500000000001,0.9,not_met
+traffic_light,fog,feature_kNN_k5,1000,0.969816,0.9,met
+traffic_light,night,feature_kNN_k5,1000,1.0,0.9,met
+traffic_light,town01,feature_kNN_k5,1000,0.955648,0.9,met
+vehicle,fog,feature_kNN_k5,1000,0.9939669999999999,0.9,met
+vehicle,night,feature_kNN_k5,1000,0.997054,0.9,met
+vehicle,town01,feature_kNN_k5,1000,0.827366,0.9,not_met

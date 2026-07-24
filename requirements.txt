@@ -1,6 +1,7 @@
 torch
 torchvision
 pandas
+pyarrow
 numpy
 matplotlib
 scikit-learn
