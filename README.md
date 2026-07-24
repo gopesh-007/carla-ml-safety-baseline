@@ -54,11 +54,26 @@ Together, these experiments form evidence toward a structured machine-learning s
 | Traffic Light | Fog | 0.000 | 0.000 | Complete collapse |
 | Traffic Light | Night | 0.000 | 0.000 | Complete collapse |
 | Traffic Light | Town-01 | 0.283 | 0.416 | Significant degradation |
+| Vehicle | Fog | 1.000 | 0.872 | Recall retained, but nearly every frame is predicted positive |
+| Vehicle | Night | 0.372 | 0.512 | Major false-negative failure |
+| Vehicle | Town-01 | 0.752 | 0.719 | Moderate domain-shift degradation |
 | Pedestrian | Fog | 0.315 | 0.269 | Partial degradation |
 | Pedestrian | Night | 0.000 | 0.000 | Complete collapse |
 | Pedestrian | Town-01 | 0.277 | 0.180 | Below safe threshold |
 
-> ⚠️ **Safety note:** Neither the pedestrian nor traffic light model should be deployed for night or fog conditions. The pedestrian model additionally fails to meet minimum safety recall thresholds even under ideal conditions.
+> ⚠️ **Safety note:** None of the three camera-only models is validated for all adverse conditions. The vehicle detector is especially unsafe at night, while its fog result is operationally unusable because it produces false positives on almost every frame.
+
+#### Vehicle Robustness Detail
+
+All vehicle ODD results below use the same trained checkpoint and a sigmoid decision threshold of 0.5. Each condition contains 3,600 labelled frames.
+
+| Condition | Accuracy | Precision | Recall | F1 | TP | FP | TN | FN |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Fog | 0.7739 | 0.7738 | 1.0000 | 0.8725 | 2,785 | 814 | 1 | 0 |
+| Night | 0.4517 | 0.8211 | 0.3724 | 0.5124 | 1,037 | 226 | 589 | 1,748 |
+| Town-01 | 0.6486 | 0.6885 | 0.7516 | 0.7187 | 1,616 | 731 | 719 | 534 |
+
+The fog result illustrates why recall and F1 cannot be considered in isolation: the classifier predicts **vehicle present for 3,599 of 3,600 frames**, preserving recall while causing 814 unnecessary positive detections. At night, it misses 1,748 of 2,785 vehicles, making the model unsafe for night driving. Town-01 also reduces F1 from 0.8577 on the standard test set to 0.7187, confirming sensitivity to map/domain shift.
 
 ### Temperature Scaling (Exercise 5.4)
 
@@ -270,6 +285,10 @@ carla_baseline_project/
 │   ├── evaluate_traffic_light_fog.py          # Robustness: fog
 │   ├── evaluate_traffic_light_night.py        # Robustness: night
 │   ├── evaluate_traffic_light_town.py         # Robustness: Town-01
+│   ├── evaluate_vehicle_robustness.py          # Shared vehicle ODD evaluator
+│   ├── evaluate_vehicle_fog.py                 # Robustness: fog
+│   ├── evaluate_vehicle_night.py               # Robustness: night
+│   ├── evaluate_vehicle_town.py                # Robustness: Town-01
 │   │
 │   ├── evaluate_temperature_scaling.py        # Ex 5.4: temperature scaling
 │   ├── plot_temperature_distribution.py       # Ex 5.4: probability plot
@@ -469,14 +488,17 @@ python evaluate_vehicle.py
 # Fog
 python evaluate_pedestrian_fog.py
 python evaluate_traffic_light_fog.py
+python evaluate_vehicle_fog.py
 
 # Night
 python evaluate_pedestrian_night.py
 python evaluate_traffic_light_night.py
+python evaluate_vehicle_night.py
 
 # Domain shift (Town-01)
 python evaluate_pedestrian_town.py
 python evaluate_traffic_light_town.py
+python evaluate_vehicle_town.py
 ```
 
 ### Exercise 5.4 — Temperature Scaling
@@ -613,9 +635,9 @@ The models were trained **exclusively on clear-weather daytime data**. No safety
 
 | Condition | Risk Level | Evidence |
 |---|---|---|
-| Night driving | 🔴 Critical | Pedestrian & traffic light recall = 0.0 |
-| Fog | 🔴 Critical | Pedestrian & traffic light recall = 0.0 |
-| New towns / maps | 🟠 High | Traffic light F1 drops from 0.944 → 0.416 |
+| Night driving | 🔴 Critical | Pedestrian & traffic-light recall = 0.0; vehicle recall = 0.372 |
+| Fog | 🔴 Critical | Pedestrian F1 = 0.269; traffic-light recall = 0.0; vehicle predicts positive in 3,599/3,600 frames |
+| New towns / maps | 🟠 High | Traffic-light F1: 0.944 → 0.416; vehicle F1: 0.858 → 0.719 |
 | Rain, snow, dusk | 🟠 High | Not evaluated — assumed unsafe |
 
 ### Safety Constraints
@@ -623,10 +645,11 @@ The models were trained **exclusively on clear-weather daytime data**. No safety
 | ID | Constraint |
 |---|---|
 | SC-1 | Pedestrian model must achieve recall ≥ 0.95 before deployment |
-| SC-2 | System must not operate at night or in fog without validated models |
-| SC-3 | Traffic light model must be re-validated when the operational map changes |
+| SC-2 | System must not operate at night or in fog without validated perception models and a safe fallback |
+| SC-3 | Perception models must be re-validated when the operational map changes |
 | SC-4 | Camera-only perception is insufficient — LIDAR/RADAR redundancy required |
 | SC-5 | Class imbalance must be addressed before retraining |
+| SC-6 | Vehicle detections must be temporally confirmed before triggering availability-critical braking or stopping actions |
 
 ### Temperature Scaling & Safety Constraints
 
@@ -709,7 +732,7 @@ Adversarial training can reduce this risk but cannot eliminate it. Residual risk
 ## 🔍 Key Findings
 
 - ✅ **Traffic Light:** Best-performing model (F1: 0.944) under ideal conditions — completely blind at night and in fog
-- ✅ **Vehicle:** Solid performance (F1: 0.858) — not yet evaluated under adverse conditions
+- ⚠️ **Vehicle:** Clean-test F1 is 0.858, but night recall falls to 0.372 (F1: 0.512) and Town-01 F1 falls to 0.719. Its fog F1 of 0.872 is misleading because it predicts nearly every frame as positive.
 - ❌ **Pedestrian:** Most safety-critical and weakest model. Baseline recall of **0.108** means ~9 out of 10 pedestrians are missed. Fails completely at night. Requires redesign before any safety deployment claim.
 - ⚠️ **Temperature scaling:** Accuracy is invariant to T — calibration is the missing safety metric
 - 🔴 **Backdoor attack:** ASR=100% achieved with only 2.4% poisoned training data — standard evaluation cannot detect this
@@ -755,6 +778,7 @@ Adversarial training can reduce this risk but cannot eliminate it. Residual risk
 16. Validate calibration under OOD conditions, not only on the standard test set
 17. Tune cost-sensitive decision thresholds jointly with planner-level comfort and availability constraints
 18. Add runtime monitoring for calibration drift and uncertainty under distribution shift
+19. Add temporal tracking and a false-positive-rate safety limit for vehicle detections, then retrain with fog, night, and map-diverse data
 
 ---
 
