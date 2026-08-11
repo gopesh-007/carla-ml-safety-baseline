@@ -415,7 +415,7 @@ The pedestrian and traffic-light models use class weights calculated from their 
 | Traffic Light | 0.1805 | 0.1006 | 0.0681 | 0.0605 | 0.0499 |
 | Vehicle | 0.7441 | 0.6360 | 0.5533 | 0.4938 | 0.4618 |
 
-> The traffic light model converged excellently. The pedestrian model shows high residual loss (0.84), indicating insufficient training and the impact of class imbalance.
+> The traffic-light training loss decreased consistently and reached 0.0499 after five epochs. The pedestrian loss remained considerably higher at 0.8415, which is consistent with a more difficult and imbalanced classification task. These training losses are descriptive only; the safety conclusions are based on held-out recall, calibration, robustness, and OOD evaluation results.
 
 ---
 
