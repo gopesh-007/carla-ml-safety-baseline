@@ -395,14 +395,17 @@ carla_baseline_project/
 
 ## 🧠 Model Architecture
 
-All three classifiers share the same architecture:
+All three classifiers use the same basic architecture and were trained independently for their respective binary labels:
 
-- **Backbone:** ResNet-18 (pre-trained on ImageNet, fine-tuned)
-- **Output head:** Single neuron with sigmoid activation
-- **Loss function:** Binary Cross-Entropy with class weighting (pos_weight = 5482/1718 for pedestrian)
-- **Optimizer:** Adam (lr=0.001)
+- **Backbone:** ResNet-18 initialized without ImageNet-pretrained weights (`weights=None`)
+- **Output head:** One linear output logit; sigmoid is applied during evaluation
+- **Loss function:** `BCEWithLogitsLoss` with a task-specific `pos_weight`
+- **Optimizer:** Adam (`lr=0.001`)
 - **Epochs:** 5
-- **Device:** CPU
+- **Batch size:** 32
+- **Training device used:** CPU; the scripts automatically use CUDA when it is available
+
+The pedestrian and traffic-light models use class weights calculated from their respective training-label distributions. The evaluated vehicle checkpoint was trained with `pos_weight = 5482/1718`, which unintentionally reused the pedestrian class ratio. This historical configuration is retained for reproducibility and is treated as a limitation in the safety analysis.
 
 ### Training Loss (5 Epochs)
 
@@ -473,7 +476,6 @@ Pillow
 jupyter
 grad-cam
 opencv-python
-matplotlib
 ```
 ---
 
