@@ -10,6 +10,7 @@
 # 6. compare with MSP
 
 import os
+from pathlib import Path
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -24,6 +25,7 @@ from sklearn.metrics import roc_auc_score
 # CONFIG
 # ======================================================
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 IMAGE_SIZE = 224
@@ -256,6 +258,7 @@ def compute_auroc(
 
 if __name__ == "__main__":
 
+    os.chdir(PROJECT_ROOT)
     print("\nLoading model...")
 
     model = load_model(MODEL_PATH)

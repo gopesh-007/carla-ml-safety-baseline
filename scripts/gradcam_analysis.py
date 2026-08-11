@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import cv2
 import torch
 import numpy as np
@@ -14,6 +15,7 @@ from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 # CONFIG
 # =========================================================
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 IMAGE_SIZE = 224
@@ -207,6 +209,7 @@ def run_analysis(model_path, image_folder, output_folder, labels_path, label_col
 
 if __name__ == "__main__":
 
+    os.chdir(PROJECT_ROOT)
     # =====================================================
     # PEDESTRIAN DETECTION
     # =====================================================
