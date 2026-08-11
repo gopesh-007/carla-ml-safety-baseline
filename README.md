@@ -3,7 +3,6 @@
 > **Course:** Introduction to Machine Learning Safety  
 > **Project:** Binary perception classifiers for autonomous driving safety analysis  
 > **Author:** Gopeshkumar Harsukh Rabadiya
-> **Matrikel-Nr.:** 261637
 
 ---
 
