@@ -104,6 +104,12 @@ model = model.to(device)
 # LOSS + OPTIMIZER
 # ----------------------------
 
+# Historical training configuration used for the evaluated vehicle checkpoint.
+# This value unintentionally reused the pedestrian class ratio (5482/1718).
+# The vehicle training distribution is 5458 positive and 1742 negative, so a
+# distribution-derived vehicle weight would be 1742/5458. The historical value
+# is retained here so the submitted checkpoint and reported results remain
+# reproducible; this configuration error is treated as a safety limitation.
 pos_weight = torch.tensor([5482 / 1718]).to(device)
 
 criterion = nn.BCEWithLogitsLoss(

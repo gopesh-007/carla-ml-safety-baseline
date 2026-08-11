@@ -1,11 +1,13 @@
 venv/
+.venv/
 __pycache__/
+*.py[cod]
 .ipynb_checkpoints/
 .DS_Store
 
 data/
-*.pth.matplotlib_cache/
+models/
+*.pth
+
 .matplotlib_cache/
 tmp/
-
-models/
