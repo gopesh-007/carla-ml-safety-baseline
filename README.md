@@ -2,13 +2,14 @@
 
 > **Course:** Introduction to Machine Learning Safety  
 > **Project:** Binary perception classifiers for autonomous driving safety analysis  
-> **Author:** Gopeshkumar Harsukh Rabadiya 
+> **Author:** Gopeshkumar Harsukh Rabadiya
+> **Matrikel-Nr.:** 261637
 
 ---
 
 ## 📋 Overview
 
-This project trains and evaluates **three independent binary classifiers** for safety-critical perception tasks in autonomous driving, using data from the [CARLA](https://carla.org/) autonomous driving simulator.
+This project trains and evaluates **three independent binary classifiers** for safety-critical perception tasks in autonomous driving, using the CARLA-based dataset provided by the professor.
 
 Each model takes a single **front-facing RGB camera image** as input and outputs a binary prediction:
 
@@ -310,8 +311,8 @@ carla_baseline_project/
 │   │
 │   ├── evaluate_ood_msp.py                    # Ex 7: MSP OOD detection
 │   ├── evaluate_ood_knn.py                    # Ex 7: k-NN OOD detection
-│   ├── evaluate_ood_knn_all_models.py          # Ex 7: k-NN OOD detection for all models
-│   ├── evaluate_odd_coverage.py                # ODD k-projection coverage
+│   ├── evaluate_ood_knn_all_models.py         # Ex 7: k-NN OOD detection for all models
+│   ├── evaluate_odd_coverage.py               # ODD k-projection coverage
 │   │
 │   ├── evaluate_adversarial.py                # Ex 8: FGSM robustness evaluation
 │   │
@@ -341,14 +342,14 @@ carla_baseline_project/
 │   ├── temperature_distribution.png           # Ex 5.4 plot
 │   │
 │   ├── ood/
-│   │   ├── knn_all_models_results.csv          # All-model k-NN AUROC summary
+│   │   ├── knn_all_models_results.csv         # All-model k-NN AUROC summary
 │   │   └── plots/
 │   │       ├── msp_histogram.png
 │   │       └── knn_histogram.png
 │   │
 │   ├── odd/
-│   │   ├── odd_test_scenarios.csv              # Context factors per test split
-│   │   └── odd_k_projection_coverage.csv       # 1-, 2-, and 3-way coverage
+│   │   ├── odd_test_scenarios.csv             # Context factors per test split
+│   │   └── odd_k_projection_coverage.csv      # 1-, 2-, and 3-way coverage
 │   │
 │   ├── explainability/
 │   │   ├── pedestrian/
@@ -452,7 +453,7 @@ The CARLA dataset contains front-facing RGB camera images from simulated urban e
 
 ### Prerequisites
 
-- Python 3.8+
+- Python 3.10 or newer
 - pip
 
 ### Install dependencies
@@ -467,6 +468,7 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
+
 ### Download the evaluated model checkpoints
 
 The exact checkpoints used to produce the reported results are available in the
@@ -507,6 +509,7 @@ pillow
 grad-cam
 opencv-python
 ```
+
 ---
 
 ## 🚀 Usage
@@ -915,4 +918,4 @@ This project is for educational purposes as part of a university course assignme
 
 ---
 
-*CARLA Simulator — [carla.org](https://carla.org/) | PyTorch — [pytorch.org](https://pytorch.org/)*
+*Dataset and system specification provided as part of the Introduction to Machine Learning Safety course.*
