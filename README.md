@@ -467,6 +467,30 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
+### Download the evaluated model checkpoints
+
+The exact checkpoints used to produce the reported results are available in the
+[GitHub model-checkpoint release](https://github.com/gopesh-007/carla-ml-safety-baseline/releases/tag/v1.0-model-checkpoints).
+
+From the project root, download them into the `models/` directory:
+
+```bash
+mkdir -p models
+
+curl -L -o models/pedestrian_model.pth \
+  https://github.com/gopesh-007/carla-ml-safety-baseline/releases/download/v1.0-model-checkpoints/pedestrian_model.pth
+
+curl -L -o models/traffic_light_model.pth \
+  https://github.com/gopesh-007/carla-ml-safety-baseline/releases/download/v1.0-model-checkpoints/traffic_light_model.pth
+
+curl -L -o models/vehicle_model.pth \
+  https://github.com/gopesh-007/carla-ml-safety-baseline/releases/download/v1.0-model-checkpoints/vehicle_model.pth
+
+curl -L -o models/pedestrian_model_backdoor.pth \
+  https://github.com/gopesh-007/carla-ml-safety-baseline/releases/download/v1.0-model-checkpoints/pedestrian_model_backdoor.pth
+```
+
+The course dataset is not included because it was supplied separately by the professor. After placing the dataset under `data/`, the downloaded checkpoints can be used to reproduce the evaluation results without retraining.
 
 ### Requirements
 
