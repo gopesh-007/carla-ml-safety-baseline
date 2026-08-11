@@ -1,3 +1,4 @@
+from pathlib import Path
 import pandas as pd
 from PIL import Image
 
@@ -158,6 +159,7 @@ for epoch in range(EPOCHS):
 # SAVE MODEL
 # ----------------------------
 
+Path("../models").mkdir(parents=True, exist_ok=True)
 torch.save(
     model.state_dict(),
     "../models/traffic_light_model.pth"

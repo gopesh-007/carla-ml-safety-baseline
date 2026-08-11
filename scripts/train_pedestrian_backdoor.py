@@ -1,3 +1,4 @@
+from pathlib import Path
 import pandas as pd
 from PIL import Image
 
@@ -218,6 +219,7 @@ for epoch in range(EPOCHS):
 # SAVE BACKDOORED MODEL
 # ----------------------------
 
+Path("../models").mkdir(parents=True, exist_ok=True)
 torch.save(model.state_dict(), "../models/pedestrian_model_backdoor.pth")
 
 print("\nBackdoored model saved to ../models/pedestrian_model_backdoor.pth")
