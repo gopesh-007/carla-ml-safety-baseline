@@ -474,11 +474,12 @@ python -m pip install -r requirements.txt
 torch
 torchvision
 pandas
+pyarrow
 numpy
 matplotlib
 scikit-learn
-Pillow
 jupyter
+pillow
 grad-cam
 opencv-python
 ```
