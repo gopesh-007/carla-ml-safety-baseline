@@ -9,4 +9,3 @@ jupyter
 pillow
 grad-cam
 opencv-python
-matplotlib
