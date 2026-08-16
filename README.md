@@ -869,6 +869,8 @@ A full evaluation and safety analysis report is available in [`report/CARLA_ML_S
 - Spurious correlation and shortcut-learning analysis
 - Safety-oriented recommendation
 
+The scripts, checkpoints, protocols, and saved outputs behind the final V-1--V-5 verdicts are mapped in [`EVIDENCE.md`](EVIDENCE.md).
+
 ---
 
 ## 🏫 Course Context
