@@ -138,7 +138,7 @@ def plot_histogram(
         id_scores,
         bins=30,
         alpha=0.6,
-        label="Validation (ID)"
+        label="Test (ID)"
     )
 
     plt.hist(
@@ -217,11 +217,11 @@ if __name__ == "__main__":
     # COMPUTE SCORES
     # ==================================================
 
-    print("\nComputing validation scores...")
+    print("\nComputing independent test ID scores...")
 
-    validation_scores = compute_msp_scores(
+    test_scores = compute_msp_scores(
         model,
-        "data/validation/rgb-front"
+        "data/test/rgb-front"
     )
 
     print("Computing fog scores...")
@@ -252,7 +252,7 @@ if __name__ == "__main__":
     print("\nGenerating histogram...")
 
     plot_histogram(
-        validation_scores,
+        test_scores,
         fog_scores,
         night_scores,
         town_scores
@@ -263,17 +263,17 @@ if __name__ == "__main__":
     # ==================================================
 
     fog_auroc = compute_auroc(
-        validation_scores,
+        test_scores,
         fog_scores
     )
 
     night_auroc = compute_auroc(
-        validation_scores,
+        test_scores,
         night_scores
     )
 
     town_auroc = compute_auroc(
-        validation_scores,
+        test_scores,
         town_scores
     )
 

@@ -1,7 +1,9 @@
 """Evaluate feature-based k-NN OOD detection for all CARLA classifiers.
 
-The detector is fitted on 1,000 in-distribution validation embeddings for each
-classifier and then evaluated against fog, night, and Town-01 images.
+The detector is fitted on in-distribution validation embeddings. Its ID scores
+are then measured on a separate dry/day test subset before comparison with fog,
+night, and Town-01 images. Keeping the reference and evaluated ID images
+separate prevents a validation image from becoming its own nearest neighbour.
 
 Run from the project root:
     python scripts/evaluate_ood_knn_all_models.py
@@ -29,6 +31,7 @@ MODEL_CONFIGS = {
 }
 DATASETS = {
     "validation": PROJECT_ROOT / "data" / "validation" / "rgb-front",
+    "test": PROJECT_ROOT / "data" / "test" / "rgb-front",
     "fog": PROJECT_ROOT / "data" / "test-fog" / "rgb-front",
     "night": PROJECT_ROOT / "data" / "test-night" / "rgb-front",
     "town01": PROJECT_ROOT / "data" / "test-town-01" / "rgb-front",
@@ -134,7 +137,7 @@ def save_histogram(model_name, id_scores, scores_by_condition, output_dir):
     import matplotlib.pyplot as plt
 
     plt.figure(figsize=(10, 6))
-    plt.hist(id_scores, bins=30, alpha=0.6, label="Validation (ID)")
+    plt.hist(id_scores, bins=30, alpha=0.6, label="Test (ID)")
     for condition, scores in scores_by_condition.items():
         plt.hist(scores, bins=30, alpha=0.6, label=condition.title())
     plt.xlabel("Mean distance to 5 nearest validation embeddings")
@@ -154,20 +157,29 @@ def main():
     results = []
 
     print("Using device:", device)
+    print("Protocol: fit on validation; evaluate ID scores on the separate test split.")
     for model_name in args.models:
         print(f"\nEvaluating {model_name} model...")
         classifier = load_classifier(MODEL_CONFIGS[model_name], device)
         feature_model = FeatureExtractor(classifier).to(device).eval()
 
-        validation_features = extract_features(
+        reference_features = extract_features(
             feature_model,
             DATASETS["validation"],
             args.limit,
             args.batch_size,
             device,
         )
-        neighbors = NearestNeighbors(n_neighbors=5).fit(validation_features)
-        validation_scores = mean_knn_distance(neighbors, validation_features)
+        neighbors = NearestNeighbors(n_neighbors=5).fit(reference_features)
+
+        id_features = extract_features(
+            feature_model,
+            DATASETS["test"],
+            args.limit,
+            args.batch_size,
+            device,
+        )
+        id_scores = mean_knn_distance(neighbors, id_features)
 
         scores_by_condition = {}
         for condition in ("fog", "night", "town01"):
@@ -180,12 +192,16 @@ def main():
             )
             ood_scores = mean_knn_distance(neighbors, ood_features)
             scores_by_condition[condition] = ood_scores
-            auroc = compute_auroc(validation_scores, ood_scores)
+            auroc = compute_auroc(id_scores, ood_scores)
             results.append({
                 "model": model_name,
                 "condition": condition,
                 "detector": "feature_kNN_k5",
-                "images_per_set": args.limit,
+                "reference_split": "validation",
+                "id_split": "test",
+                "reference_images": len(reference_features),
+                "id_images": len(id_features),
+                "ood_images": len(ood_features),
                 "auroc": auroc,
                 "threshold": 0.90,
                 "verdict": "met" if auroc >= 0.90 else "not_met",
@@ -193,21 +209,11 @@ def main():
             print(f"  {condition.title()} AUROC: {auroc:.4f}")
 
         if args.save_plots:
-            save_histogram(model_name, validation_scores, scores_by_condition, output_dir)
+            save_histogram(model_name, id_scores, scores_by_condition, output_dir)
 
-        results_path = PROJECT_ROOT / "outputs" / "ood" / "knn_all_models_results.csv"
-        new_results = pd.DataFrame(results)
-        if results_path.exists():
-            existing_results = pd.read_csv(results_path)
-            combined_results = pd.concat([existing_results, new_results])
-            combined_results = combined_results.drop_duplicates(
-                subset=["model", "condition"],
-                keep="last",
-            )
-        else:
-            combined_results = new_results
-        combined_results.to_csv(results_path, index=False)
-        print(f"Saved results: {results_path}")
+    results_path = PROJECT_ROOT / "outputs" / "ood" / "knn_all_models_results.csv"
+    pd.DataFrame(results).to_csv(results_path, index=False)
+    print(f"Saved results: {results_path}")
 
 
 if __name__ == "__main__":

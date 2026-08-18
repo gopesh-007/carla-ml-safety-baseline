@@ -2,7 +2,7 @@
 # 2. extract ResNet features
 # 3. fit k-NN on validation features
 # 4. compute distances:
-    # * validation
+    # * independent test (ID)
     # * fog
     # * night
     # * town01
@@ -182,7 +182,7 @@ def plot_histogram(
         id_scores,
         bins=30,
         alpha=0.6,
-        label="Validation (ID)"
+        label="Test (ID)"
     )
 
     plt.hist(
@@ -276,6 +276,13 @@ if __name__ == "__main__":
         "data/validation/rgb-front"
     )
 
+    print("Extracting independent test features...")
+
+    test_features = extract_features(
+        feature_model,
+        "data/test/rgb-front"
+    )
+
     print("Extracting fog features...")
 
     fog_features = extract_features(
@@ -313,9 +320,9 @@ if __name__ == "__main__":
     # COMPUTE DISTANCES
     # ==================================================
 
-    validation_scores = compute_knn_scores(
+    test_scores = compute_knn_scores(
         knn,
-        validation_features
+        test_features
     )
 
     fog_scores = compute_knn_scores(
@@ -340,7 +347,7 @@ if __name__ == "__main__":
     print("\nGenerating histogram...")
 
     plot_histogram(
-        validation_scores,
+        test_scores,
         fog_scores,
         night_scores,
         town_scores
@@ -351,17 +358,17 @@ if __name__ == "__main__":
     # ==================================================
 
     fog_auroc = compute_auroc(
-        validation_scores,
+        test_scores,
         fog_scores
     )
 
     night_auroc = compute_auroc(
-        validation_scores,
+        test_scores,
         night_scores
     )
 
     town_auroc = compute_auroc(
-        validation_scores,
+        test_scores,
         town_scores
     )
 

@@ -40,7 +40,7 @@ authoritative mapping.
 | V-1 | ID recall >= 0.90 for pedestrian and >= 0.85 for traffic light/vehicle | Pedestrian recall 0.1076; traffic-light 0.9358; vehicle 0.8537 | Not met |
 | V-2 | Recall drop at FGSM epsilon 0.05 < 0.10 | Drops of 0.1923, 0.8987 and 0.8246 | Not met |
 | V-3 | Test ECE < 0.05 after validation-only temperature selection | ECE 0.0385, 0.0246 and 0.0177 | Met |
-| V-4 | k-NN OOD AUROC >= 0.90 for every model/shift | Pedestrian Town-01 0.8956; vehicle Town-01 0.8274 | Partial |
+| V-4 | k-NN OOD AUROC >= 0.90 for every model/shift | All models pass night; only vehicle passes fog; all models fail Town-01 | Partial |
 | V-5 | Invalid/OOD/low-confidence input leads to a verified minimal-risk response | Required fallback functions are not implemented | Not met |
 
 ## V-1: in-distribution detection performance
@@ -144,21 +144,24 @@ python evaluate_ood_knn_all_models.py
 
 For each classifier, the script extracts ResNet-18 embeddings from the first
 1,000 lexicographically sorted validation images and fits a five-nearest-
-neighbour detector. It compares the resulting mean distances with 1,000 images
-from fog, night and Town-01 separately.
+neighbour detector. ID scores are measured on a separate set of 1,000 standard
+dry/day test images, avoiding the self-neighbour bias that would occur if the
+validation reference images were also used as the evaluated ID set. Those ID
+scores are compared with 1,000 images from fog, night and Town-01 separately.
 
 | Model | Fog AUROC | Night AUROC | Town-01 AUROC | Result |
 |---|---:|---:|---:|---|
-| Pedestrian | 0.9844 | 1.0000 | 0.8956 | Partial |
-| Traffic light | 0.9698 | 1.0000 | 0.9556 | Met |
-| Vehicle | 0.9940 | 0.9971 | 0.8274 | Partial |
+| Pedestrian | 0.7794 | 1.0000 | 0.5168 | Partial |
+| Traffic light | 0.6304 | 1.0000 | 0.6449 | Partial |
+| Vehicle | 0.9473 | 0.9875 | 0.4311 | Partial |
 
 **Primary record:**
 [`outputs/ood/knn_all_models_results.csv`](outputs/ood/knn_all_models_results.csv)
 
-The overall verdict is partial because two Town-01 comparisons fall below
-0.90. The monitor was evaluated offline and is not connected to the planner, so
-this result cannot by itself satisfy continuous ODD enforcement.
+The overall verdict is partial: all three models meet the threshold for night,
+only the vehicle model meets it for fog, and none meets it for Town-01. The
+monitor was evaluated offline and is not connected to the planner, so this
+result cannot by itself satisfy continuous ODD enforcement.
 
 ## V-5: safe system fallback
 
