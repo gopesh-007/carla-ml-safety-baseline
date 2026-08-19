@@ -588,17 +588,24 @@ ODD coverage & H-3 & Most weather--light--town interactions are untested & Scena
 \subsection{Known design limitations}
 
 \begin{itemize}
-  \item \textbf{Traffic-light semantics (H-2):} presence alone gives no red/green state. Add a
-  validated state classifier or infrastructure signal; until then, unknown state must default to stop.
-  \item \textbf{Single-camera dependence (H-1,H-3,H-4):} one occlusion or camera fault removes all
-  perception. Add independent radar/LiDAR or another safety-rated sensing channel and camera diagnostics.
-  \item \textbf{Classification without localization (H-1,H-5):} frame-level presence is not a
-  complete driving perception interface. Object localisation, tracking and path relevance are required.
-  \item \textbf{Offline rather than closed-loop evidence (all hazards):} the experiments measure
-  classifiers on saved frames. They do not establish 10\,Hz latency, stopping distance, controller
-  stability, operator response or collision rate. Closed-loop scenario tests are necessary.
-  \item \textbf{Simulator-to-reality gap (H-3,H-4):} no evidence supports transfer from the supplied
-  simulated images to real public roads.
+  \item \textbf{Traffic-light semantics (H-2):} the classifier I trained answers ``is there a
+  traffic light?'', but that turned out to be the wrong question for planning. Presence alone gives
+  no red/green state, so a validated state classifier or infrastructure signal is needed. Until then,
+  an unknown state has to default to stop.
+  \item \textbf{Single-camera dependence (H-1,H-3,H-4):} the system has exactly one perception
+  channel. If the camera is occluded or fails, nothing else can compensate. I would add an independent
+  radar/LiDAR channel, together with camera diagnostics that can at least detect a bad input.
+  \item \textbf{Classification without localization (H-1,H-5):} a frame-level presence label
+  collapses very different situations---for example, a pedestrian waiting at the curb and one already
+  crossing---into the same signal. Localisation, tracking and path relevance are required before this
+  can serve as a driving perception interface.
+  \item \textbf{Offline rather than closed-loop evidence (all hazards):} everything reported here
+  was measured on saved frames. It therefore establishes neither 10\,Hz latency nor stopping distance,
+  controller stability, operator response time or collision rate. Closed-loop scenario testing is the
+  necessary next step, not an optional extension of the analysis.
+  \item \textbf{Simulator-to-reality gap (H-3,H-4):} I generated no evidence that performance on
+  the supplied simulated images would transfer to real public roads. That gap remains open regardless
+  of how the other model metrics turn out.
 \end{itemize}
 
 The calibrated pedestrian cost experiment (Appendix~\ref{app:additional-evidence}) shows the trade-off:
@@ -658,41 +665,42 @@ The experiments provide enough evidence to decide the stated verification checks
 cover every condition relevant to vehicle safety. I considered the following limitations when
 forming the final recommendation.
 
-\textbf{Frames are not the same as independent driving scenarios.} The standard test split contains
-3,600 labelled frames, but neighbouring CARLA frames may come from the same driving sequence and
-share scenery, weather and road users. I therefore report the evaluated frame count without treating
-it as 3,600 statistically independent safety scenarios. A scenario-level evaluation would require
-separate runs, defined initial conditions and outcomes such as collision or successful stopping.
+\textbf{Frames are not the same as independent driving scenarios.} It is tempting to read ``3,600
+test frames'' as a large, statistically robust sample, and I want to resist that interpretation.
+Neighbouring CARLA frames may come from the same driving sequence and share scenery, weather and
+road users. I therefore report the number as a frame count---not as 3,600 independent safety
+scenarios. A proper scenario-level evaluation would need separate runs, defined initial conditions
+and outcomes such as collision or successful stopping, none of which this dataset provides.
 
-\textbf{The adversarial result is limited to the implemented attack.} V-2 used untargeted one-step
-FGSM on a deterministic sample of 100 validation images per model with seed 42. The observed recall
-drops are sufficient to reject the stated V-2 bound for that protocol. They do not estimate the
-real-world frequency of adversarial inputs or establish behaviour under PGD, adversarial patches,
-physical attacks, compression, camera artefacts or other perturbation models.
+\textbf{The adversarial result has a narrow scope.} I want to be precise about what V-2 actually
+tested: untargeted one-step FGSM on a deterministic sample of 100 validation images per model, with
+seed 42. The observed drops are enough to reject the stated bound for this protocol. They do not
+tell me how frequently adversarial inputs occur in the real world, or how the models behave under
+PGD, adversarial patches, physical attacks, compression artefacts, camera noise or other attacks.
+Those are separate questions that this experiment was not designed to answer.
 
-\textbf{The calibration result is conditional on in-distribution data.} Temperature was selected on
-the validation split and ten-bin ECE was then computed on the standard test split. This separation
-avoids fitting the temperature on the reported test result, but the resulting V-3 pass applies only
-to the tested dry/day/source-town distribution. For pedestrian, validation NLL was still decreasing
-at temperature 3.0, the edge of the search grid, so the reported value is the best tested setting
-rather than a demonstrated unconstrained optimum. ECE also depends on the binning choice, and no
-calibration claim was verified for fog, night, Town-01 or later dataset drift.
+\textbf{Calibration remains conditional on ID data.} I selected temperature on the validation split
+and computed ten-bin ECE on the test split so that I was not fitting the temperature to the result I
+would later report. That protects the V-3 result, but only within its dry/day/source-town scope. For
+the pedestrian model, validation NLL was still decreasing at temperature 3.0, the edge of my search
+grid. The reported .0385 is therefore the best value I tested, not proof that I found the unconstrained
+optimum. ECE also depends on the chosen bins, and I did not verify calibration for fog, night,
+Town-01 or later dataset drift.
 
-\textbf{OOD and ODD evidence cover only selected factors.} The feature detector used $k=5$, 1,000
-validation images as the reference set, an independent 1,000-image dry/day test subset as ID, and
-1,000 images from each OOD condition. AUROC measures ranking across each complete comparison; no
-runtime operating threshold or fallback response was validated. The ODD coverage
-calculation used weather, lighting and town because those factors were available in the supplied
-metadata. It did not measure coverage over object distance, occlusion, object size, traffic density,
-glare, blur, camera contamination or combinations of these conditions. The reported 33.3\%
-three-way coverage is therefore a description of the selected factors, not of the complete driving
-environment.
+\textbf{The OOD and ODD numbers cover selected factors only.} The feature detector used $k=5$,
+1,000 validation references, an independent 1,000-image dry/day test subset as ID, and 1,000 images
+from each OOD condition. AUROC tells me how well the detector ranks the two groups across a complete
+comparison; it does not select a runtime threshold or define what the planner should do after a flag.
+The coverage calculation has a similar limitation. I used weather, lighting and town because those
+were the factors available in the supplied metadata. Object distance, occlusion, object size, traffic
+density, glare, blur and camera contamination are absent. The 33.3\% three-way result therefore
+describes the three factors for which I had data, not the complete driving environment.
 
-\textbf{The thresholds are project verification criteria.} The recall, recall-drop, ECE and AUROC
-limits define the checks in this safety case. They are not presented as legal certification limits
-or universal acceptance criteria for autonomous-driving systems. A failed threshold is sufficient
-to leave the linked safety constraint open, while a passed threshold supports only the particular
-metric, dataset and experimental protocol that were evaluated.
+\textbf{These thresholds are project criteria, not certification limits.} The recall, recall-drop,
+ECE and AUROC limits are checks defined for this safety case; I am not presenting them as legal or
+industry-wide acceptance criteria. The asymmetry matters in practice: a failure is enough to leave
+the linked safety constraint open, whereas a pass supports only the particular metric, dataset and
+protocol that I evaluated. It does not generalise beyond that evidence.
 
 These limitations do not remove the negative findings. They restrict the scope of the positive
 evidence and prevent a model-level result from being interpreted as proof of closed-loop system
